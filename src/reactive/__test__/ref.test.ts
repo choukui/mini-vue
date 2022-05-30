@@ -1,5 +1,6 @@
 import { ref } from "../ref";
 import { effect } from "../effect";
+import { reactive } from '../reactive'
 
 describe("reactive/ref", () => {
   it('should hold a value', () => {
@@ -51,5 +52,30 @@ describe("reactive/ref", () => {
     a.value = 2
     expect(dummy).toBe(2)
   })
+  it('should work like a normal property when nested in a reactive object', () => {
+    const a = ref(1)
+    const obj = reactive({
+      a,
+      b: {
+        c: a
+      }
+    })
 
+    let dummy1: number
+    let dummy2: number
+
+    effect(() => {
+      dummy1 = obj.a
+      dummy2 = obj.b.c
+    })
+    const assertDummiesEqualTo = (val: number) =>
+      [dummy1, dummy2].forEach(dummy => expect(dummy).toBe(val))
+    assertDummiesEqualTo(1)
+    a.value++
+    assertDummiesEqualTo(2)
+    obj.a++
+    assertDummiesEqualTo(3)
+    obj.b.c++
+    assertDummiesEqualTo(4)
+  })
 })

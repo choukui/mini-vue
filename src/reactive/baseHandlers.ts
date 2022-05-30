@@ -1,7 +1,7 @@
-import {reactive, ReactiveFlags, Target} from "./reactive";
+import { reactive, ReactiveFlags, Target, toRaw } from "./reactive";
 import { track, trigger } from "./effect";
-import { isObject } from "../shared";
-import {isRef} from "./ref";
+import { isArray, isObject } from "../shared";
+import { isRef } from "./ref";
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get (target: Target, key: string | symbol, receiver: any): any {
@@ -36,14 +36,39 @@ function createGetter(isReadonly = false, shallow = false) {
   }
 }
 
-export const mutableHandlers: ProxyHandler<object> = {
-  get: createGetter(),
-  set(target: Target, key: string | symbol, value: any, receiver: any): boolean {
+function createSetter() {
+  return function set (target: Target, key: string | symbol, value: any, receiver: any):boolean {
+
+    /*
+    * 处理 reactive 嵌套 ref 时的赋值时不响应的情况
+    * eg:
+    * const a = ref(1)
+    * const obj = reactive({
+    *   a,
+    *   b: {
+    *     c: a
+    *   }
+    * })
+    */
+    let oldValue = (target as any)[key]
+     value = toRaw(value)
+    oldValue = toRaw(oldValue)
+    if (!isArray(target) && !isRef(value) && isRef(oldValue)) {
+      oldValue.value = value
+      return true
+    }
+    /* end */
+
     const res = Reflect.set(target, key, value, receiver)
     // 派发更新
     trigger(target, key)
     return res
   }
+}
+
+export const mutableHandlers: ProxyHandler<object> = {
+  get: createGetter(),
+  set: createSetter()
 }
 
 export const mutableCollectionHandlers = {}

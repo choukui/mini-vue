@@ -1,6 +1,6 @@
 import { Dep } from "./dep";
 import { trackEffects, triggerEffect } from "./effect";
-import {reactive, toRow} from "./reactive";
+import {reactive, toRaw} from "./reactive";
 import {hasChange, isObject} from "../shared";
 
 type RefBase<T> = {
@@ -44,7 +44,7 @@ class RefImpl<T> {
   *  */
   constructor(value: T, public readonly _shallow = false) {
     // TODO 浅渲染逻辑未实现
-    this._rawValue = this._shallow ? value : toRow(value)
+    this._rawValue = this._shallow ? value : toRaw(value)
     // cover函数 如果是个对象调用reactive方法，不是的话。返回原值
     this._value = this._shallow ? value : cover(value)
   }
@@ -55,12 +55,12 @@ class RefImpl<T> {
     return this._value;
   }
 
-  set value(value) {
+  set value(newValue) {
     // 值不同，再触发更新，新旧值相同不会触发更新
-    if (hasChange(value, this._rawValue)) {
+    if (hasChange(newValue, this._rawValue)) {
       // 必须先赋值再出发依赖，否则拿到的是旧值
-      this._value = value;
-      this._rawValue = value;
+      this._value = this._shallow ? newValue : cover(newValue);
+      this._rawValue = newValue;
       // 派发依赖更新
       triggerRefValue(this)
     }
