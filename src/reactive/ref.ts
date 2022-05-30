@@ -1,6 +1,6 @@
 import { Dep } from "./dep";
 import { trackEffects, triggerEffect } from "./effect";
-import { toRow } from "./reactive";
+import {reactive, toRow} from "./reactive";
 import {hasChange, isObject} from "../shared";
 
 type RefBase<T> = {
@@ -30,8 +30,8 @@ function trackRefValue(ref: RefBase<any>) {
 }
 
 function cover<T extends unknown>(value: T) {
-  // 未实现对象的转换
-  return value
+  // 对象转换reactive
+  return isObject(value) ? reactive(value) : value
 }
 
 class RefImpl<T> {
@@ -45,6 +45,7 @@ class RefImpl<T> {
   constructor(value: T, public readonly _shallow = false) {
     // TODO 浅渲染逻辑未实现
     this._rawValue = this._shallow ? value : toRow(value)
+    // cover函数 如果是个对象调用reactive方法，不是的话。返回原值
     this._value = this._shallow ? value : cover(value)
   }
 
@@ -77,6 +78,6 @@ function createRef(rawValue: any, shallow = false) {
 }
 
 // ref 实现
-export function ref(value:unknown) {
+export function ref(value?:unknown) {
   return createRef(value)
 }
