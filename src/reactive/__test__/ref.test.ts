@@ -1,4 +1,4 @@
-import { ref } from "../ref";
+import { ref, isRef, Ref } from "../ref";
 import { effect } from "../effect";
 import { reactive } from '../reactive'
 
@@ -77,5 +77,29 @@ describe("reactive/ref", () => {
     assertDummiesEqualTo(3)
     obj.b.c++
     assertDummiesEqualTo(4)
+  })
+
+  it('should unwrap nested ref in types', () => {
+    const a = ref(0)
+    const b = ref(a)
+
+    expect(typeof (b.value + 1)).toBe('number')
+  })
+
+  it('should unwrap nested values in types', () => {
+    const a = {
+      b: ref(0)
+    }
+
+    const c = ref(a)
+
+    expect(typeof (c.value.b + 1)).toBe('number')
+  })
+
+  it('should NOT unwrap ref types nested inside arrays', () => {
+    const arr = ref([1, ref(3)]).value
+    expect(isRef(arr[0])).toBe(false)
+    expect(isRef(arr[1])).toBe(true)
+    expect((arr[1] as Ref).value).toBe(3)
   })
 })

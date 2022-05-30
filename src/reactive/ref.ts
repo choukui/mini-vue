@@ -7,7 +7,7 @@ type RefBase<T> = {
   dep?: Dep
   value: T
 }
-interface Ref<T = any> {
+export interface Ref<T = any> {
   value: T
 }
 

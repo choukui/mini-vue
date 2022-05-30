@@ -15,6 +15,9 @@ function createGetter(isReadonly = false, shallow = false) {
       return isReadonly
     }
 
+    // 判断target是不是数组
+    const targetIsArray = isArray(target)
+
     const res = Reflect.get(target, key, receiver)
 
     track(target, key)
@@ -24,7 +27,12 @@ function createGetter(isReadonly = false, shallow = false) {
     * 例如 reactive({ foo: ref('foo')})
     * */
     if (isRef(res)) {
-      return res.value
+      /**
+       * 数组的时候不解包，如果ref(2)被自动解包了，数据就成了[1, 2], 就失去响应性了。
+       * eg: [1, ref(2)]
+      */
+      const shouldUnwrap = !targetIsArray
+      return shouldUnwrap ? res.value : res
     }
 
     if (isObject(res)) {
