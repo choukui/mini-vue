@@ -1,6 +1,7 @@
 import { Dep } from "./dep";
 import { trackEffects, triggerEffect } from "./effect";
-import { hasChange } from "../shared";
+import { toRow } from "./reactive";
+import {hasChange, isObject} from "../shared";
 
 type RefBase<T> = {
   dep?: Dep
@@ -20,16 +21,17 @@ function triggerRefValue(ref: RefBase<any>) {
     triggerEffect(ref.dep)
   }
 }
-
-
-
-
 // 收集Ref依赖
 function trackRefValue(ref: RefBase<any>) {
   if (!ref.dep) { // 如果没有dep 初始化一个set
     ref.dep = new Set()
   }
   trackEffects(ref.dep)
+}
+
+function cover<T extends unknown>(value: T) {
+  // 未实现对象的转换
+  return value
 }
 
 class RefImpl<T> {
@@ -42,8 +44,8 @@ class RefImpl<T> {
   *  */
   constructor(value: T, public readonly _shallow = false) {
     // TODO 浅渲染逻辑未实现
-    this._value = value
-    this._rawValue = value
+    this._rawValue = this._shallow ? value : toRow(value)
+    this._value = this._shallow ? value : cover(value)
   }
 
   get value() {
