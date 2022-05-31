@@ -1,6 +1,6 @@
 import { reactive, ReactiveFlags, Target, toRaw } from "./reactive";
 import { track, trigger } from "./effect";
-import { isArray, isObject } from "../shared";
+import { isArray, isObject, isIntegerKey } from "../shared";
 import { isRef } from "./ref";
 
 function createGetter(isReadonly = false, shallow = false) {
@@ -28,10 +28,18 @@ function createGetter(isReadonly = false, shallow = false) {
     * */
     if (isRef(res)) {
       /**
-       * 数组的时候不解包，如果ref(2)被自动解包了，数据就成了[1, 2], 就失去响应性了。
+       * 1、数组的时候不解包，如果ref(2)被自动解包了，数据就成了[1, 2], 就失去响应性了。
        * eg: [1, ref(2)]
+       * 2、数组赋值时下标不是一个可迭代的key, 自动解包
+       * eg:
+       *  const arr = ref([])
+       *  arr.value[1] = ref(1) // result: arr[0] => ref(1)
+       *  arr.value[''] = ref(2) // result:  arr[''] => 2
+       *  arr.value[Symbol('')] = ref(3) // result:  arr[''] => 3
+       *  因为Symbol('') 、"" 不是可迭代的key,
+       *  例：字符串数字'1'、'2'、'3'...、数字1、2、3... 是可迭代的key
       */
-      const shouldUnwrap = !targetIsArray
+      const shouldUnwrap = !targetIsArray || !isIntegerKey(key)
       return shouldUnwrap ? res.value : res
     }
 
