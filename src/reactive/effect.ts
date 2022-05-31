@@ -7,6 +7,25 @@ const targetMap = new WeakMap<any, KeyToDepMap>()
 // 当前活跃的 reactiveEffect 实例
 let activeEffect: ReactiveEffect | undefined
 
+let shouldTrack = true
+const trackStack: boolean[] = []
+
+// 暂停收集
+export function pauseTracking() {
+  trackStack.push(shouldTrack)
+  shouldTrack = false
+}
+
+// 重置为上一次的状态
+export function resetTracking() {
+  const last = trackStack.pop()
+  shouldTrack = last === undefined ? true : last
+}
+
+// 用来判断是否可以收集依赖
+function isTracking() {
+  return shouldTrack && activeEffect !== undefined
+}
 
 export function effect<T>(fn: () => T) {// fn 会立即执行
 
@@ -15,6 +34,9 @@ export function effect<T>(fn: () => T) {// fn 会立即执行
 }
 
 export function track(target: object, key: unknown) {
+  if (!isTracking()) {
+    return
+  }
   /* 初始化 dep start */
   let depsMap = targetMap.get(target)
   if (!depsMap) {
@@ -61,7 +83,9 @@ export function trigger(target: object, key: unknown) {
 * 收集 Effect 依赖
 *  */
 export function trackEffects(dep: Dep) {
-  dep.add(activeEffect!)
+  if (shouldTrack) {
+    dep.add(activeEffect!)
+  }
 }
 
 // 更新依赖
