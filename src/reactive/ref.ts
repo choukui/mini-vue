@@ -43,7 +43,7 @@ export interface Ref<T = any> {
 
 // 判断是否是ref
 export function isRef(r: any): r is Ref {
-  return Boolean(r && r.__v__isRef === true)
+  return Boolean(r && r.__v_isRef === true)
 }
 
 // 解包
@@ -93,7 +93,7 @@ class RefImpl<T> {
   private _value: T // 实际存储的地方
   private _rawValue: T // 原始值
   public dep?: Dep = undefined // 存储依赖，Set结构
-  public readonly __v__isRef = true // ref 标记
+  public readonly __v_isRef = true // ref 标记
   /*
   * shallow true 浅渲染， false 深渲染
   *  */
@@ -125,7 +125,7 @@ class RefImpl<T> {
 
 // 这块实现比较巧妙，toRef本质上还是reactive对象。这里中间做了一层代理
 class ObjectRefImpl<T extends object, K extends keyof T> {
-  public readonly __v__isRef = true
+  public readonly __v_isRef = true
   constructor(private readonly _object: T, private readonly _key: K) {}
   get value () {
     return this._object[this._key]
