@@ -1,5 +1,6 @@
 import { isObject, toRawType } from "../shared";
 import { mutableHandlers, mutableCollectionHandlers} from "./baseHandlers";
+import { Ref, UnwrapRefSimple } from "./ref";
 
 export enum ReactiveFlags {
   RAW = '__v_raw', // 标记原始数据
@@ -20,6 +21,8 @@ const enum TargetType {
   COMMON = 1,
   COLLECTION = 2
 }
+
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
 function targetTypeMap(rawType: string) {
   switch (rawType) {
@@ -85,6 +88,7 @@ function createReactiveObject(
 }
 
 // reactive实现
+export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // 如果是个readonlyReactive就直接返回
   if (target && (target as Target)[ReactiveFlags.IS_READONLY]) {
