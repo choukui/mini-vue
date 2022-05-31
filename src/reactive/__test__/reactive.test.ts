@@ -1,4 +1,4 @@
-import { reactive, isReactive, toRaw } from "../reactive";
+import { reactive, isReactive, toRaw, markRaw } from "../reactive";
 import { isRef, ref } from "../ref";
 
 describe('reactivity/reactive', () => {
@@ -227,14 +227,14 @@ describe('reactivity/reactive', () => {
     expect(reactive(d)).toBe(d)
   })*/
 
-  /*test('markRaw', () => {
+  test('markRaw', () => {
     const obj = reactive({
       foo: { a: 1 },
       bar: markRaw({ b: 2 })
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
-  })*/
+  })
 
   // test('should not observe non-extensible objects', () => {
   //   const obj = reactive({
@@ -248,12 +248,12 @@ describe('reactivity/reactive', () => {
   //   expect(isReactive(obj.baz)).toBe(false)
   // })
   //
-  // test('should not observe objects with __v_skip', () => {
-  //   const original = {
-  //     foo: 1,
-  //     __v_skip: true
-  //   }
-  //   const observed = reactive(original)
-  //   expect(isReactive(observed)).toBe(false)
-  // })
+  test('should not observe objects with __v_skip', () => {
+    const original = {
+      foo: 1,
+      __v_skip: true
+    }
+    const observed = reactive(original)
+    expect(isReactive(observed)).toBe(false)
+  })
 })

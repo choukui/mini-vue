@@ -1,5 +1,5 @@
-import { isObject, toRawType } from "../shared";
-import { mutableHandlers, mutableCollectionHandlers} from "./baseHandlers";
+import { def, isObject, toRawType } from "../shared";
+import { mutableHandlers, mutableCollectionHandlers } from "./baseHandlers";
 import { Ref, UnwrapRefSimple } from "./ref";
 
 export enum ReactiveFlags {
@@ -73,6 +73,7 @@ function createReactiveObject(
   }
 
   // 如果target是被标记为原始数据 INVALID = 0
+  // __v_skip 也不会成为响应式
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
@@ -115,4 +116,11 @@ export function isReactive(value: unknown): boolean {
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as  Target)[ReactiveFlags.RAW]
   return raw ? toRaw(raw) : observed
+}
+
+// 标记一个对象不会被转化为响应式
+export function markRaw<T extends object>(value: T): T {
+  // 对象设置__v_skip属性，就不会变成响应式
+  def(value, ReactiveFlags.SKIP, true)
+  return value
 }
