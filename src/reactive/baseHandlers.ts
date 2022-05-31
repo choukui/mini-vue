@@ -2,7 +2,9 @@ import { reactive, ReactiveFlags, Target, toRaw, reactiveMap } from "./reactive"
 import { track, trigger, pauseTracking, resetTracking } from "./effect";
 import { isArray, isObject, isIntegerKey,hasOwn, isSymbol, makeMap } from "../shared";
 import { isRef } from "./ref";
+import { TriggerOpTypes, TrackOpTypes } from "./operations";
 
+export const ITERATE_KEY = Symbol( '')
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 // symbol 相关
 const builtInSymbols = new Set(
@@ -19,7 +21,7 @@ function createArrayInstrumentations() {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       const arr = toRaw(this) as any
       for (let i = 0, l = this.length; i < l; i++) {
-        track(arr, i + '')
+        track(arr, TrackOpTypes.GET,i + '')
       }
       const res = arr[key](...args)
       if (res === -1 || res === false) {
@@ -84,7 +86,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
-    track(target, key)
+    track(target, TrackOpTypes.GET, key)
 
     /*
     * 处理嵌套的ref(), 也叫做解包ref
@@ -141,14 +143,21 @@ function createSetter() {
 
     const res = Reflect.set(target, key, value, receiver)
     // 派发更新
-    trigger(target, key)
+    trigger(target, TriggerOpTypes.ADD, key, value)
     return res
   }
 }
 
+// 数组 for in 处理
+function ownKeys(target: object): (string | symbol)[] {
+  track(target, TrackOpTypes.ITERATE, isArray(target) ? 'length' : ITERATE_KEY)
+  return Reflect.ownKeys(target)
+}
+
 export const mutableHandlers: ProxyHandler<object> = {
   get: createGetter(),
-  set: createSetter()
+  set: createSetter(),
+  ownKeys
 }
 
 export const mutableCollectionHandlers = {}

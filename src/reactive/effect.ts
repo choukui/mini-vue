@@ -1,5 +1,7 @@
 import { Dep, createDep } from "./dep";
 import { isArray } from "../shared";
+import {TrackOpTypes, TriggerOpTypes} from "./operations";
+// import { isIntegerKey } from "../shared";
 
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
@@ -33,7 +35,7 @@ export function effect<T>(fn: () => T) {// fn 会立即执行
   _effect.run()
 }
 
-export function track(target: object, key: unknown) {
+export function track(target: object, type:TrackOpTypes, key: unknown) {
   if (!isTracking()) {
     return
   }
@@ -52,7 +54,7 @@ export function track(target: object, key: unknown) {
   trackEffects(dep)
 }
 
-export function trigger(target: object, key: unknown) {
+export function trigger(target: object, type: TriggerOpTypes, key: unknown, newValue?: unknown) {
 
   // 从集合中拿不到deps 就不用派发更新了
   const depsMap = targetMap.get(target)
@@ -60,7 +62,31 @@ export function trigger(target: object, key: unknown) {
     return
   }
   const deps: (Dep | undefined)[] = []
-  deps.push(depsMap.get(key))
+  // if (key === 'length' && isArray(target)) {
+  //   depsMap.forEach((dep, key) => {
+  //     if (key === 'length' || key >= (newValue as number)) {
+  //       deps.push(dep)
+  //     }
+  //   })
+  // } else {
+    // if (key !== void 0) {
+      deps.push(depsMap.get(key))
+    // }
+
+
+    // switch (type) {
+    //   case TriggerOpTypes.ADD:
+    //     if (isIntegerKey(key)) {
+    //       // new index added to array -> length changes
+    //       deps.push(depsMap.get('length'))
+    //     }
+    //     break
+    //   case TriggerOpTypes.DELETE:
+    //     break
+    //   case TriggerOpTypes.SET:
+    //     break
+    // }
+  // }
 
 
   if (deps.length === 1) { //只有一个时, 不循环。节省性能
