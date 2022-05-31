@@ -1,15 +1,46 @@
-import { reactive, ReactiveFlags, Target, toRaw } from "./reactive";
-import { track, trigger } from "./effect";
-import { isArray, isObject, isIntegerKey, isSymbol, makeMap } from "../shared";
+import { reactive, ReactiveFlags, Target, toRaw, reactiveMap } from "./reactive";
+import { track, trigger, pauseTracking, resetTracking } from "./effect";
+import { isArray, isObject, isIntegerKey,hasOwn, isSymbol, makeMap } from "../shared";
 import { isRef } from "./ref";
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
+// symbol 相关
 const builtInSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
     .map(key => (Symbol as any)[key])
     .filter(isSymbol)
 )
-
+// 数组array
+const arrayInstrumentations = createArrayInstrumentations()
+// 对数组的操作进行了拦截
+function createArrayInstrumentations() {
+  const instrumentations: Record<string, Function> = {}
+  ;(['indexOf', 'includes', 'lastIndexOf']).forEach(key => {
+    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
+      const arr = toRaw(this) as any
+      for (let i = 0, l = this.length; i < l; i++) {
+        track(arr, i + '')
+      }
+      const res = arr[key](...args)
+      if (res === -1 || res === false) {
+        return arr[key](...args.map(toRaw))
+      } else {
+        return res
+      }
+    }
+  })
+  ;(['push']).forEach(key => {
+    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
+      // 暂停收集
+      pauseTracking()
+      const res = (toRaw(this) as any)[key].apply(this, args)
+      // 恢复收集
+      resetTracking()
+      return res
+    }
+  })
+  return instrumentations
+}
 function createGetter(isReadonly = false, shallow = false) {
   return function get (target: Target, key: string | symbol, receiver: any): any {
     /*
@@ -20,10 +51,21 @@ function createGetter(isReadonly = false, shallow = false) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) { // '__v_isReadonly'
       return isReadonly
+    } else if (
+      // 如果是读取原数据，并且缓存中有。直接返回目标对象 toRaw() 会读取__v_raw
+      // 可以防止重复收集数据造成调用栈溢出
+      key === ReactiveFlags.RAW &&
+      receiver === reactiveMap.get(target)
+    ) {
+      return target
     }
 
     // 判断target是不是数组
     const targetIsArray = isArray(target)
+    // debugger
+    if (!isReadonly && targetIsArray && hasOwn(arrayInstrumentations, key)) {
+      return Reflect.get(arrayInstrumentations, key, receiver)
+    }
 
     const res = Reflect.get(target, key, receiver)
 
