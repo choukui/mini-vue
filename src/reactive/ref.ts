@@ -1,12 +1,36 @@
 import { Dep } from "./dep";
+import { CollectionTypes } from './collectionHandlers'
 import { trackEffects, triggerEffect } from "./effect";
 import { reactive, toRaw } from "./reactive";
 import { hasChange, isObject } from "../shared";
+type BaseTypes = string | number | boolean
+export interface RefUnwrapBailTypes {}
+
+export type UnwrapRef<T> = T extends Ref<infer V>
+  ? UnwrapRefSimple<V>
+  : UnwrapRefSimple<T>
+
+export type UnwrapRefSimple<T> = T extends
+  | Function
+  | CollectionTypes
+  | BaseTypes
+  | Ref
+  | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
+  ? T
+  : T extends Array<any>
+    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+    : T extends object
+      ? {
+        [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+      }
+      : T
 
 type RefBase<T> = {
   dep?: Dep
   value: T
 }
+
+export type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 
 export interface Ref<T = any> {
   value: T
@@ -25,6 +49,11 @@ export function unref<T>(ref:T | Ref<T>): T {
 // 浅渲染
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
+}
+
+// toRef
+export function toRef<T extends object, K extends keyof T>(object: T, key: K): ToRef<T[K]> {
+  return isRef(object[key]) ? object[key] : (new ObjectRefImpl(object, key) as any)
 }
 
 // 触发Ref依赖收集
@@ -77,6 +106,18 @@ class RefImpl<T> {
       // 派发依赖更新
       triggerRefValue(this)
     }
+  }
+}
+
+// 这块实现比较巧妙，toRef本质上还是reactive对象。这里中间做了一层代理
+class ObjectRefImpl<T extends object, K extends keyof T> {
+  public readonly __v__isRef = true
+  constructor(private readonly _object: T, private readonly _key: K) {}
+  get value () {
+    return this._object[this._key]
+  }
+  set value(newValue) {
+    this._object[this._key] = newValue
   }
 }
 /*
