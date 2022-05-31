@@ -2,7 +2,7 @@ import { Dep } from "./dep";
 import { CollectionTypes } from './collectionHandlers'
 import { trackEffects, triggerEffect } from "./effect";
 import { reactive, toRaw } from "./reactive";
-import { hasChange, isObject } from "../shared";
+import {hasChange, isArray, isObject} from "../shared";
 type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
@@ -31,6 +31,11 @@ type RefBase<T> = {
 }
 
 export type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
+export type ToRefs<T = any> = {
+  // #2687: somehow using ToRef<T[K]> here turns the resulting type into
+  // a union of multiple Ref<*> types instead of a single Ref<* | *> type.
+  [K in keyof T]: T[K] extends Ref ? T[K] : Ref<UnwrapRef<T[K]>>
+}
 
 export interface Ref<T = any> {
   value: T
@@ -54,6 +59,15 @@ export function shallowRef(value?: unknown) {
 // toRef
 export function toRef<T extends object, K extends keyof T>(object: T, key: K): ToRef<T[K]> {
   return isRef(object[key]) ? object[key] : (new ObjectRefImpl(object, key) as any)
+}
+
+// toRefs
+export function toRefs<T extends object>(object: T): ToRefs<T> {
+  const res: any = isArray(object) ? new Array(object.length) : {}
+  for (const key in object) {
+    res[key] = toRef(object, key)
+  }
+  return res
 }
 
 // 触发Ref依赖收集
