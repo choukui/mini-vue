@@ -1,7 +1,7 @@
 import { Dep } from "./dep";
 import { trackEffects, triggerEffect } from "./effect";
-import {reactive, toRaw} from "./reactive";
-import {hasChange, isObject} from "../shared";
+import { reactive, toRaw } from "./reactive";
+import { hasChange, isObject } from "../shared";
 
 type RefBase<T> = {
   dep?: Dep
@@ -22,8 +22,13 @@ export function unref<T>(ref:T | Ref<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
+// 浅渲染
+export function shallowRef(value?: unknown) {
+  return createRef(value, true)
+}
+
 // 触发Ref依赖收集
-function triggerRefValue(ref: RefBase<any>) {
+export function triggerRefValue(ref: RefBase<any>) {
   if (ref.dep) {
     triggerEffect(ref.dep)
   }
@@ -53,6 +58,7 @@ class RefImpl<T> {
     // TODO 浅渲染逻辑未实现
     this._rawValue = this._shallow ? value : toRaw(value)
     // cover函数 如果是个对象调用reactive方法，不是的话。返回原值
+    // 浅渲染直接返回原始值不做reactive转换
     this._value = this._shallow ? value : cover(value)
   }
 

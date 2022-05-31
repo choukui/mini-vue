@@ -1,6 +1,6 @@
-import { ref, isRef, Ref, unref } from "../ref";
+import { ref, isRef, Ref, unref, shallowRef, triggerRefValue } from "../ref";
 import { effect } from "../effect";
-import { reactive } from '../reactive'
+import { reactive, isReactive } from '../reactive'
 
 describe("reactive/ref", () => {
   it('should hold a value', () => {
@@ -183,5 +183,46 @@ describe("reactive/ref", () => {
   test('unref', () => {
     expect(unref(1)).toBe(1)
     expect(unref(ref(1))).toBe(1)
+  })
+
+  test('shallowRef', () => {
+    const sref = shallowRef({ a: 1 })
+    expect(isReactive(sref.value)).toBe(false)
+
+    let dummy
+    effect(() => {
+      dummy = sref.value.a
+    })
+    expect(dummy).toBe(1)
+
+    sref.value = { a: 2 }
+    expect(isReactive(sref.value)).toBe(false)
+    expect(dummy).toBe(2)
+  })
+
+  test('shallowRef force trigger', () => {
+    const sref = shallowRef({ a: 1 })
+    let dummy
+    effect(() => {
+      dummy = sref.value.a
+    })
+    expect(dummy).toBe(1)
+
+    sref.value.a = 2
+    expect(dummy).toBe(1) // should not trigger yet
+
+    // force trigger
+    triggerRefValue(sref)
+    expect(dummy).toBe(2)
+  })
+
+  test('isRef', () => {
+    expect(isRef(ref(1))).toBe(true)
+    // expect(isRef(computed(() => 1))).toBe(true)
+
+    expect(isRef(0)).toBe(false)
+    expect(isRef(1)).toBe(false)
+    // an object that looks like a ref isn't necessarily a ref
+    expect(isRef({ value: 0 })).toBe(false)
   })
 })
