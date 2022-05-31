@@ -41,6 +41,14 @@ export interface Ref<T = any> {
   value: T
 }
 
+export type CustomRefFactory<T> = (
+  track: () => void,
+  trigger: () => void
+) => {
+  get: () => T
+  set: (value: T) => void
+}
+
 // 判断是否是ref
 export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v_isRef === true)
@@ -68,6 +76,37 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
     res[key] = toRef(object, key)
   }
   return res
+}
+
+export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
+  return new CustomRefImpl(factory) as any
+}
+
+class CustomRefImpl<T> {
+  public dep?: Dep = undefined
+
+  private readonly _get: ReturnType<CustomRefFactory<T>>['get']
+  private readonly _set: ReturnType<CustomRefFactory<T>>['set']
+
+  public readonly __v_isRef = true
+
+  constructor(factory: CustomRefFactory<T>) {
+    const { set, get } = factory(
+      () => trackRefValue(this),
+      () => triggerRefValue(this)
+    )
+
+    this._set = set
+    this._get = get
+  }
+
+  get value() {
+    return this._get()
+  }
+
+  set value(newVal) {
+    this._set(newVal)
+  }
 }
 
 // 触发Ref依赖收集

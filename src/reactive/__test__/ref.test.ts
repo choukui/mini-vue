@@ -1,4 +1,4 @@
-import { ref, isRef, Ref, unref, shallowRef, triggerRefValue, toRef, toRefs } from "../ref";
+import { ref, isRef, Ref, unref, shallowRef, triggerRefValue, toRef, toRefs, customRef } from "../ref";
 import { effect } from "../effect";
 import { reactive, isReactive } from '../reactive'
 
@@ -317,36 +317,36 @@ describe("reactive/ref", () => {
     expect(refs[1].value).toBe('2')
   })
 
-  // test('customRef', () => {
-  //   let value = 1
-  //   let _trigger: () => void
-  //
-  //   const custom = customRef((track, trigger) => ({
-  //     get() {
-  //       track()
-  //       return value
-  //     },
-  //     set(newValue: number) {
-  //       value = newValue
-  //       _trigger = trigger
-  //     }
-  //   }))
-  //
-  //   expect(isRef(custom)).toBe(true)
-  //
-  //   let dummy
-  //   effect(() => {
-  //     dummy = custom.value
-  //   })
-  //   expect(dummy).toBe(1)
-  //
-  //   custom.value = 2
-  //   // should not trigger yet
-  //   expect(dummy).toBe(1)
-  //
-  //   _trigger!()
-  //   expect(dummy).toBe(2)
-  // })
+  test('customRef', () => {
+    let value = 1
+    let _trigger: () => void
+
+    const custom = customRef((track, trigger) => ({
+      get() {
+        track()
+        return value
+      },
+      set(newValue: number) {
+        value = newValue
+        _trigger = trigger
+      }
+    }))
+
+    expect(isRef(custom)).toBe(true)
+
+    let dummy
+    effect(() => {
+      dummy = custom.value
+    })
+    expect(dummy).toBe(1)
+
+    custom.value = 2
+    // should not trigger yet
+    expect(dummy).toBe(1)
+
+    _trigger!()
+    expect(dummy).toBe(2)
+  })
 
   test('should not trigger when setting value to same proxy', () => {
     const obj = reactive({ count: 0 })
