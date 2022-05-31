@@ -151,6 +151,8 @@ class RefImpl<T> {
   }
 
   set value(newValue) {
+    // 转换为原始数据再做比较
+    newValue = this._shallow ? newValue : toRaw(newValue)
     // 值不同，再触发更新，新旧值相同不会触发更新
     if (hasChange(newValue, this._rawValue)) {
       // 必须先赋值再出发依赖，否则拿到的是旧值
@@ -177,7 +179,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 * shallow true 浅渲染， false 深渲染
 *  */
 function createRef(rawValue: any, shallow = false) {
-  // 如果已经是响应式了，直接返回就行了
+  // 如果已经是Ref了，直接返回就行了
   if (isRef(rawValue)) {
     return rawValue
   }
