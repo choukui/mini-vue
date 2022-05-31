@@ -115,4 +115,68 @@ describe("reactive/ref", () => {
     expect(arrRef['' as any]).toBe(1)
     expect(arrRef[symbolKey as any]).toBe(2)
   })
+
+  it('should keep tuple types', () => {
+    const tuple: [number, string, { a: number }, () => number, Ref<number>] = [
+      0,
+      '1',
+      { a: 1 },
+      () => 0,
+      ref(0)
+    ]
+    const tupleRef = ref(tuple)
+
+    tupleRef.value[0]++
+    expect(tupleRef.value[0]).toBe(1)
+    tupleRef.value[1] += '1'
+    expect(tupleRef.value[1]).toBe('11')
+    tupleRef.value[2].a++
+    expect(tupleRef.value[2].a).toBe(2)
+    expect(tupleRef.value[3]()).toBe(0)
+    tupleRef.value[4].value++
+    expect(tupleRef.value[4].value).toBe(1)
+  })
+
+  it('should keep symbols', () => {
+    const customSymbol = Symbol()
+    const obj = {
+      [Symbol.asyncIterator]: ref(1),
+      [Symbol.hasInstance]: { a: ref('a') },
+      [Symbol.isConcatSpreadable]: { b: ref(true) },
+      [Symbol.iterator]: [ref(1)],
+      [Symbol.match]: new Set<Ref<number>>(),
+      [Symbol.matchAll]: new Map<number, Ref<string>>(),
+      [Symbol.replace]: { arr: [ref('a')] },
+      [Symbol.search]: { set: new Set<Ref<number>>() },
+      [Symbol.species]: { map: new Map<number, Ref<string>>() },
+      [Symbol.split]: new WeakSet<Ref<boolean>>(),
+      [Symbol.toPrimitive]: new WeakMap<Ref<boolean>, string>(),
+      [Symbol.toStringTag]: { weakSet: new WeakSet<Ref<boolean>>() },
+      [Symbol.unscopables]: { weakMap: new WeakMap<Ref<boolean>, string>() },
+      [customSymbol]: { arr: [ref(1)] }
+    }
+
+    const objRef = ref(obj)
+
+    const keys: (keyof typeof obj)[] = [
+      Symbol.asyncIterator,
+      Symbol.hasInstance,
+      Symbol.isConcatSpreadable,
+      Symbol.iterator,
+      Symbol.match,
+      Symbol.matchAll,
+      Symbol.replace,
+      Symbol.search,
+      Symbol.species,
+      Symbol.split,
+      Symbol.toPrimitive,
+      Symbol.toStringTag,
+      Symbol.unscopables,
+      customSymbol
+    ]
+
+    keys.forEach(key => {
+      expect(objRef.value[key]).toStrictEqual(obj[key])
+    })
+  })
 })

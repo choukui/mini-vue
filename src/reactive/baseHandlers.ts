@@ -1,7 +1,14 @@
 import { reactive, ReactiveFlags, Target, toRaw } from "./reactive";
 import { track, trigger } from "./effect";
-import { isArray, isObject, isIntegerKey } from "../shared";
+import { isArray, isObject, isIntegerKey, isSymbol, makeMap } from "../shared";
 import { isRef } from "./ref";
+
+const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
+const builtInSymbols = new Set(
+  Object.getOwnPropertyNames(Symbol)
+    .map(key => (Symbol as any)[key])
+    .filter(isSymbol)
+)
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get (target: Target, key: string | symbol, receiver: any): any {
@@ -19,6 +26,21 @@ function createGetter(isReadonly = false, shallow = false) {
     const targetIsArray = isArray(target)
 
     const res = Reflect.get(target, key, receiver)
+
+
+    /*
+    * 处理Symbol.prototype上的内置属性，直接返回原值
+    * eg:
+    * const obj = {
+    *   [Symbol.asyncIterator]: ref(1),
+    *   ...otherBuiltInSymbols
+    * }
+    * const objRef = ref(obj)
+    * objRef.value[Symbol.asyncIterator] === obj[Symbol.asyncIterator] // true
+    * */
+    if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
+      return res
+    }
 
     track(target, key)
 

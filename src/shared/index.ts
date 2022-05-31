@@ -1,6 +1,7 @@
 export const isArray = Array.isArray
 export const hasChange = (value: any, oldValue: any) => !Object.is(value, oldValue)
 export const isObject = (val: unknown): val is Record<any, any> => val !== null && typeof val === 'object'
+export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
 
 export const objectToString = Object.prototype.toString
 
@@ -22,3 +23,5 @@ export const isIntegerKey = (key: unknown) =>
   key !== 'NaN' &&
   key[0] !== '-' &&
   '' + parseInt(key, 10) === key
+
+export * from './makeMap'
