@@ -7,12 +7,19 @@ type RefBase<T> = {
   dep?: Dep
   value: T
 }
+
 export interface Ref<T = any> {
   value: T
 }
 
+// 判断是否是ref
 export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v__isRef === true)
+}
+
+// 解包
+export function unref<T>(ref:T | Ref<T>): T {
+  return isRef(ref) ? ref.value : ref
 }
 
 // 触发Ref依赖收集

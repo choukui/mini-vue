@@ -1,4 +1,4 @@
-import { ref, isRef, Ref } from "../ref";
+import { ref, isRef, Ref, unref } from "../ref";
 import { effect } from "../effect";
 import { reactive } from '../reactive'
 
@@ -178,5 +178,10 @@ describe("reactive/ref", () => {
     keys.forEach(key => {
       expect(objRef.value[key]).toStrictEqual(obj[key])
     })
+  })
+
+  test('unref', () => {
+    expect(unref(1)).toBe(1)
+    expect(unref(ref(1))).toBe(1)
   })
 })
