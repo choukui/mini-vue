@@ -30,4 +30,12 @@ export const hasOwn = (
   key: string | symbol
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
+export const def = (obj: object, key: string | symbol, value: any) => {
+  Object.defineProperty(obj, key, {
+    configurable: false,
+    enumerable: true,
+    value
+  })
+}
+
 export * from './makeMap'
