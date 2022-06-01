@@ -1,6 +1,6 @@
 import { def, isObject, toRawType } from "../shared";
-import { mutableHandlers, readonlyHandlers } from "./baseHandlers";
-import { mutableCollectionHandlers, readonlyCollectionHandlers } from "./collectionHandlers";
+import { mutableHandlers, readonlyHandlers, shallowReactiveHandlers } from "./baseHandlers";
+import { mutableCollectionHandlers, readonlyCollectionHandlers, shallowCollectionHandlers } from "./collectionHandlers";
 import { Ref, UnwrapRefSimple } from "./ref";
 
 export enum ReactiveFlags {
@@ -127,6 +127,17 @@ export function reactive(target: object) {
     mutableHandlers,
     mutableCollectionHandlers,
     reactiveMap
+  )
+}
+
+// 浅响应，只有根对象是响应式的
+export function shallowReactive<T extends object>(target: T): T {
+  return createReactiveObject(
+    target,
+    false,
+    shallowReactiveHandlers,
+    shallowCollectionHandlers,
+    shallowReactiveMap
   )
 }
 

@@ -9,7 +9,7 @@ import {
   shallowReactiveMap, readonly
 } from "./reactive";
 import { track, trigger, pauseTracking, resetTracking } from "./effect";
-import { isArray, isObject, isIntegerKey,hasOwn, isSymbol, makeMap } from "../shared";
+import { isArray, isObject, isIntegerKey, hasOwn, isSymbol, makeMap, extend } from "../shared";
 import { isRef } from "./ref";
 import { TriggerOpTypes, TrackOpTypes } from "./operations";
 
@@ -56,6 +56,8 @@ function createArrayInstrumentations() {
 const get = createGetter()
 const set = createSetter()
 const readonlyGet = createGetter(true)
+const shallowGet = createGetter(false, true)
+const shallowSet = createSetter(true)
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get (target: Target, key: string | symbol, receiver: any): any {
@@ -107,6 +109,10 @@ function createGetter(isReadonly = false, shallow = false) {
       track(target, TrackOpTypes.GET, key)
     }
 
+    // 如果是浅渲染，直接返回结果
+    if (shallow) {
+      return res
+    }
 
     /*
     * 处理嵌套的ref(), 也叫做解包ref
@@ -138,7 +144,7 @@ function createGetter(isReadonly = false, shallow = false) {
   }
 }
 
-function createSetter() {
+function createSetter(shallow = false) {
   return function set (target: Target, key: string | symbol, value: any, receiver: any):boolean {
 
     /*
@@ -152,12 +158,14 @@ function createSetter() {
     *   }
     * })
     */
-    let oldValue = (target as any)[key]
-     value = toRaw(value)
-    oldValue = toRaw(oldValue)
-    if (!isArray(target) && !isRef(value) && isRef(oldValue)) {
-      oldValue.value = value
-      return true
+    if (!shallow) {
+      let oldValue = (target as any)[key]
+      value = toRaw(value)
+      oldValue = toRaw(oldValue)
+      if (!isArray(target) && !isRef(value) && isRef(oldValue)) {
+        oldValue.value = value
+        return true
+      }
     }
     /* end */
 
@@ -191,3 +199,12 @@ export const readonlyHandlers: ProxyHandler<object> = {
     return true
   }
 }
+
+export const shallowReactiveHandlers: ProxyHandler<object> = extend(
+  {},
+  mutableHandlers,
+  {
+    get: shallowGet,
+    set: shallowSet
+  }
+)
