@@ -112,6 +112,11 @@ export function isReactive(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_REACTIVE])
 }
 
+// 是否是个响应式对象
+export function isProxy(value: unknown): boolean {
+  return isReactive(value) || isReadonly(value)
+}
+
 // 返回响应式对象的原始数据
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as  Target)[ReactiveFlags.RAW]
