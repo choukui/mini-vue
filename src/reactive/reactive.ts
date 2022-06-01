@@ -1,5 +1,6 @@
 import { def, isObject, toRawType } from "../shared";
-import { mutableHandlers, mutableCollectionHandlers } from "./baseHandlers";
+import { mutableHandlers, readonlyHandlers } from "./baseHandlers";
+import { mutableCollectionHandlers, readonlyCollectionHandlers } from "./collectionHandlers";
 import { Ref, UnwrapRefSimple } from "./ref";
 
 export enum ReactiveFlags {
@@ -23,6 +24,28 @@ const enum TargetType {
 }
 
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
+// readonly
+type Primitive = string | number | boolean | bigint | symbol | undefined | null
+type Builtin = Primitive | Function | Date | Error | RegExp
+export type DeepReadonly<T> = T extends Builtin
+  ? T
+  : T extends Map<infer K, infer V>
+    ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+    : T extends ReadonlyMap<infer K, infer V>
+      ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+      : T extends WeakMap<infer K, infer V>
+        ? WeakMap<DeepReadonly<K>, DeepReadonly<V>>
+        : T extends Set<infer U>
+          ? ReadonlySet<DeepReadonly<U>>
+          : T extends ReadonlySet<infer U>
+            ? ReadonlySet<DeepReadonly<U>>
+            : T extends WeakSet<infer U>
+              ? WeakSet<DeepReadonly<U>>
+              : T extends Promise<infer U>
+                ? Promise<DeepReadonly<U>>
+                : T extends {}
+                  ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+                  : Readonly<T>
 
 function targetTypeMap(rawType: string) {
   switch (rawType) {
@@ -50,6 +73,9 @@ function getTargetType(value: Target) {
 
 // 都是存储缓存用的
 export const reactiveMap = new WeakMap<Target, any>()
+export const shallowReactiveMap = new WeakMap<Target, any>()
+export const readonlyMap = new WeakMap<Target, any>()
+export const shallowReadonlyMap = new WeakMap<Target, any>()
 
 function createReactiveObject(
   target: Target,
@@ -95,7 +121,23 @@ export function reactive(target: object) {
   if (target && (target as Target)[ReactiveFlags.IS_READONLY]) {
     return target
   }
-  return createReactiveObject(target, false, mutableHandlers, mutableCollectionHandlers, reactiveMap)
+  return createReactiveObject(
+    target,
+    false,
+    mutableHandlers,
+    mutableCollectionHandlers,
+    reactiveMap
+  )
+}
+
+export function readonly<T extends object>(target: T): DeepReadonly<UnwrapNestedRefs<T>> {
+  return createReactiveObject(
+    target,
+    true,
+    readonlyHandlers,
+    readonlyCollectionHandlers,
+    readonlyMap
+  )
 }
 
 // __v_isReadonly 代表是个只读属性

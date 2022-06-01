@@ -1,4 +1,13 @@
-import { reactive, ReactiveFlags, Target, toRaw, reactiveMap } from "./reactive";
+import {
+  reactive,
+  ReactiveFlags,
+  Target,
+  toRaw,
+  reactiveMap,
+  shallowReadonlyMap,
+  readonlyMap,
+  shallowReactiveMap, readonly
+} from "./reactive";
 import { track, trigger, pauseTracking, resetTracking } from "./effect";
 import { isArray, isObject, isIntegerKey,hasOwn, isSymbol, makeMap } from "../shared";
 import { isRef } from "./ref";
@@ -43,6 +52,11 @@ function createArrayInstrumentations() {
   })
   return instrumentations
 }
+
+const get = createGetter()
+const set = createSetter()
+const readonlyGet = createGetter(true)
+
 function createGetter(isReadonly = false, shallow = false) {
   return function get (target: Target, key: string | symbol, receiver: any): any {
     /*
@@ -57,7 +71,10 @@ function createGetter(isReadonly = false, shallow = false) {
       // 如果是读取原数据，并且缓存中有。直接返回目标对象 toRaw() 会读取__v_raw
       // 可以防止重复收集数据造成调用栈溢出
       key === ReactiveFlags.RAW &&
-      receiver === reactiveMap.get(target)
+      receiver === (isReadonly
+        ? shallow ? shallowReadonlyMap : readonlyMap
+        : shallow ? shallowReactiveMap : reactiveMap
+      ).get(target)
     ) {
       return target
     }
@@ -86,7 +103,10 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
-    track(target, TrackOpTypes.GET, key)
+    if (!isReadonly) {
+      track(target, TrackOpTypes.GET, key)
+    }
+
 
     /*
     * 处理嵌套的ref(), 也叫做解包ref
@@ -110,7 +130,7 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (isObject(res)) {
-      return reactive(res)
+      return isReadonly ? readonly(res) : reactive(res)
     }
 
 
@@ -154,10 +174,20 @@ function ownKeys(target: object): (string | symbol)[] {
   return Reflect.ownKeys(target)
 }
 
+// 处理对象数组等引用类型
 export const mutableHandlers: ProxyHandler<object> = {
-  get: createGetter(),
-  set: createSetter(),
+  get,
+  set,
   ownKeys
 }
 
-export const mutableCollectionHandlers = {}
+// readonly 只处理 get 方法，set delete 都返回true
+export const readonlyHandlers: ProxyHandler<object> = {
+  get: readonlyGet,
+  set(): boolean {
+    return true
+  },
+  deleteProperty(): boolean {
+    return true
+  }
+}
