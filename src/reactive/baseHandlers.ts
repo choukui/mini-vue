@@ -58,6 +58,7 @@ const set = createSetter()
 const readonlyGet = createGetter(true)
 const shallowGet = createGetter(false, true)
 const shallowSet = createSetter(true)
+const shallowReadonlyGet = createGetter(true, true)
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get (target: Target, key: string | symbol, receiver: any): any {
@@ -206,5 +207,13 @@ export const shallowReactiveHandlers: ProxyHandler<object> = extend(
   {
     get: shallowGet,
     set: shallowSet
+  }
+)
+
+export const shallowReadonlyHandlers: ProxyHandler<object> = extend(
+  {},
+  readonlyHandlers,
+  {
+    get: shallowReadonlyGet
   }
 )

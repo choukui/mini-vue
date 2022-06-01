@@ -1,5 +1,5 @@
 import { def, isObject, toRawType } from "../shared";
-import { mutableHandlers, readonlyHandlers, shallowReactiveHandlers } from "./baseHandlers";
+import { mutableHandlers, readonlyHandlers, shallowReactiveHandlers, shallowReadonlyHandlers } from "./baseHandlers";
 import { mutableCollectionHandlers, readonlyCollectionHandlers, shallowCollectionHandlers } from "./collectionHandlers";
 import { Ref, UnwrapRefSimple } from "./ref";
 
@@ -138,6 +138,16 @@ export function shallowReactive<T extends object>(target: T): T {
     shallowReactiveHandlers,
     shallowCollectionHandlers,
     shallowReactiveMap
+  )
+}
+
+export function shallowReadonly<T extends object>(target: T): Readonly<{ [K in keyof T]: UnwrapNestedRefs<T[K]> }> {
+  return createReactiveObject(
+    target,
+    true,
+    shallowReadonlyHandlers,
+    shallowReadonlyHandlers,
+    shallowReadonlyMap
   )
 }
 

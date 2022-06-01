@@ -5,3 +5,4 @@ type WeakCollections = WeakMap<any, any> | WeakSet<any>
 export const mutableCollectionHandlers = {}
 export const readonlyCollectionHandlers = {}
 export const shallowCollectionHandlers = {}
+export const shallowReadonlyCollectionHandlers = {}
