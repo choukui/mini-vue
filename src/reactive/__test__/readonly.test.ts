@@ -108,7 +108,7 @@ describe('reactivity/readonly', () => {
   })
 
   describe('Array', () => {
-    /*it('should make nested values readonly', () => {
+    it('should make nested values readonly', () => {
       const original = [{ foo: 1 }]
       const wrapped = readonly(original)
       expect(wrapped).not.toBe(original)
@@ -127,7 +127,7 @@ describe('reactivity/readonly', () => {
       expect(0 in wrapped).toBe(true)
       // ownKeys
       expect(Object.keys(wrapped)).toEqual(['0'])
-    })*/
+    })
 
     /*it('should not allow mutation', () => {
       const wrapped: any = readonly([{ foo: 1 }])
@@ -339,23 +339,23 @@ describe('reactivity/readonly', () => {
     })
   })*/
 
- /* test('calling reactive on an readonly should return readonly', () => {
+  test('calling reactive on an readonly should return readonly', () => {
     const a = readonly({})
     const b = reactive(a)
     expect(isReadonly(b)).toBe(true)
     // should point to same original
     expect(toRaw(a)).toBe(toRaw(b))
-  })*/
+  })
 
-  /*test('calling readonly on a reactive object should return readonly', () => {
+  test('calling readonly on a reactive object should return readonly', () => {
     const a = reactive({})
     const b = readonly(a)
     expect(isReadonly(b)).toBe(true)
     // should point to same original
     expect(toRaw(a)).toBe(toRaw(b))
-  })*/
+  })
 
- /* test('readonly should track and trigger if wrapping reactive original', () => {
+  test('readonly should track and trigger if wrapping reactive original', () => {
     const a = reactive({ n: 1 })
     const b = readonly(a)
     // should return true since it's wrapping a reactive source
@@ -369,7 +369,7 @@ describe('reactivity/readonly', () => {
     a.n++
     expect(b.n).toBe(2)
     expect(dummy).toBe(2)
-  })*/
+  })
 
   /*test('readonly collection should not track', () => {
     const map = new Map()
@@ -389,7 +389,7 @@ describe('reactivity/readonly', () => {
     expect(dummy).toBe(1)
   })*/
 
-  /*test('readonly array should not track', () => {
+  test('readonly array should not track', () => {
     const arr = [1]
     const roArr = readonly(arr)
 
@@ -397,7 +397,7 @@ describe('reactivity/readonly', () => {
       roArr.includes(2)
     })
     expect(eff.effect.deps.length).toBe(0)
-  })*/
+  })
 
 /*
   test('readonly should track and trigger if wrapping reactive original (collection)', () => {
@@ -419,37 +419,37 @@ describe('reactivity/readonly', () => {
   })
 */
 
-  /*test('wrapping already wrapped value should return same Proxy', () => {
+  test('wrapping already wrapped value should return same Proxy', () => {
     const original = { foo: 1 }
     const wrapped = readonly(original)
     const wrapped2 = readonly(wrapped)
     expect(wrapped2).toBe(wrapped)
-  })*/
+  })
 
-  /*test('wrapping the same value multiple times should return same Proxy', () => {
+  test('wrapping the same value multiple times should return same Proxy', () => {
     const original = { foo: 1 }
     const wrapped = readonly(original)
     const wrapped2 = readonly(original)
     expect(wrapped2).toBe(wrapped)
-  })*/
+  })
 
-  /*test('markRaw', () => {
+  test('markRaw', () => {
     const obj = readonly({
       foo: { a: 1 },
       bar: markRaw({ b: 2 })
     })
     expect(isReadonly(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
-  })*/
+  })
 
-  /*test('should make ref readonly', () => {
+  test('should make ref readonly', () => {
     const n: any = readonly(ref(1))
     n.value = 2
     expect(n.value).toBe(1)
-    expect(
-      `Set operation on key "value" failed: target is readonly.`
-    ).toHaveBeenWarned()
-  })*/
+    // expect(
+    //   `Set operation on key "value" failed: target is readonly.`
+    // ).toHaveBeenWarned()
+  })
 
   // https://github.com/vuejs/vue-next/issues/3376
   /*test('calling readonly on computed should allow computed to set its private properties', () => {

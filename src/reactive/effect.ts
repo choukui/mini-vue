@@ -9,6 +9,11 @@ const targetMap = new WeakMap<any, KeyToDepMap>()
 // 当前活跃的 reactiveEffect 实例
 let activeEffect: ReactiveEffect | undefined
 
+export interface ReactiveEffectRunner<T = any> {
+  (): T
+  effect: ReactiveEffect
+}
+
 let shouldTrack = true
 const trackStack: boolean[] = []
 
@@ -25,14 +30,24 @@ export function resetTracking() {
 }
 
 // 用来判断是否可以收集依赖
-function isTracking() {
+export function isTracking() {
   return shouldTrack && activeEffect !== undefined
 }
 
-export function effect<T>(fn: () => T) {// fn 会立即执行
+export function effect<T>(fn: () => T): ReactiveEffectRunner {// fn 会立即执行
 
+  // 如果上一次调用过，会拿到上次的fn函数
+  // 暂时不清楚为什么这么做。
+  if ((fn as ReactiveEffectRunner).effect) {
+    fn = (fn as ReactiveEffectRunner).effect.fn
+  }
   const _effect = new ReactiveEffect(fn)
   _effect.run()
+
+  const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
+  // 保存上一次的ReactiveEffect
+  runner.effect = _effect
+  return runner
 }
 
 export function track(target: object, type:TrackOpTypes, key: unknown) {
@@ -127,6 +142,7 @@ export function triggerEffect(dep: Dep | ReactiveEffect[]) {
 
 export class ReactiveEffect<T = any> {
   constructor(public fn:() => T) {}
+  deps: Dep[] = []
   run() {
     // 设置activeReact为当前实例，这样就可以被别的属性收集为依赖了
     activeEffect = this

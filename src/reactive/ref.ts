@@ -1,6 +1,6 @@
-import { Dep } from "./dep";
+import { Dep, createDep } from "./dep";
 import { CollectionTypes } from './collectionHandlers'
-import { trackEffects, triggerEffect } from "./effect";
+import { trackEffects, triggerEffect, isTracking } from "./effect";
 import { reactive, toRaw } from "./reactive";
 import {hasChange, isArray, isObject} from "../shared";
 type BaseTypes = string | number | boolean
@@ -117,10 +117,18 @@ export function triggerRefValue(ref: RefBase<any>) {
 }
 // 收集Ref依赖
 function trackRefValue(ref: RefBase<any>) {
-  if (!ref.dep) { // 如果没有dep 初始化一个set
-    ref.dep = new Set()
+  /**
+   * 判断是否可以收集依赖
+   * eg: readonly(ref(1))
+   * 因为readonly 不会 track 所以全局 activeReactive = undefined
+   * 所有 ref 也就不用track
+   * */
+  if (isTracking()) {
+    if (!ref.dep) { // 如果没有dep 初始化一个set
+      ref.dep = createDep()
+    }
+    trackEffects(ref.dep)
   }
-  trackEffects(ref.dep)
 }
 
 function cover<T extends unknown>(value: T) {
