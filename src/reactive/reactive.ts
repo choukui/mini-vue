@@ -5,7 +5,7 @@ import { Ref, UnwrapRefSimple } from "./ref";
 
 export enum ReactiveFlags {
   RAW = '__v_raw', // 标记原始数据
-  IS_READONLY = '__v__isReadonly', // 标记只读数据
+  IS_READONLY = '__v_isReadonly', // 标记只读数据
   IS_REACTIVE = '__v_isReactive',
   SKIP = '__v_skip'
 }

@@ -116,7 +116,7 @@ export function triggerRefValue(ref: RefBase<any>) {
   }
 }
 // 收集Ref依赖
-function trackRefValue(ref: RefBase<any>) {
+export function trackRefValue(ref: RefBase<any>) {
   /**
    * 判断是否可以收集依赖
    * eg: readonly(ref(1))
