@@ -9,6 +9,8 @@ const targetMap = new WeakMap<any, KeyToDepMap>()
 // 当前活跃的 reactiveEffect 实例
 let activeEffect: ReactiveEffect | undefined
 
+export type EffectScheduler = (...args: any[]) => any
+
 export interface ReactiveEffectRunner<T = any> {
   (): T
   effect: ReactiveEffect
@@ -135,13 +137,18 @@ export function triggerEffect(dep: Dep | ReactiveEffect[]) {
   for (const effect of effects) {
     // 判断是不是当前activeReactive
     if (effect !== activeEffect) {
-      effect.run()
+      // 派发更新时，优先执行调度器方法，没有的话再执行run
+      if (effect.scheduler) {
+        effect.scheduler()
+      } else {
+        effect.run()
+      }
     }
   }
 }
 
 export class ReactiveEffect<T = any> {
-  constructor(public fn:() => T) {}
+  constructor(public fn:() => T, public scheduler: EffectScheduler| null = null) {}
   deps: Dep[] = []
   run() {
     // 设置activeReact为当前实例，这样就可以被别的属性收集为依赖了
