@@ -40,4 +40,8 @@ export const def = (obj: object, key: string | symbol, value: any) => {
 
 export const extend = Object.assign
 
+export const isFunction = (val: unknown): val is Function =>
+  typeof val === 'function'
+export const NOOP = () => {}
+
 export * from './makeMap'

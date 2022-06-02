@@ -6,6 +6,7 @@ import {TrackOpTypes, TriggerOpTypes} from "./operations";
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
+const effectStack: ReactiveEffect[] = []
 // 当前活跃的 reactiveEffect 实例
 let activeEffect: ReactiveEffect | undefined
 
@@ -29,6 +30,11 @@ export function pauseTracking() {
 export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
+}
+
+export function enableTracking() {
+  trackStack.push(shouldTrack)
+  shouldTrack = true
 }
 
 // 用来判断是否可以收集依赖
@@ -152,10 +158,25 @@ export class ReactiveEffect<T = any> {
   deps: Dep[] = []
   run() {
     // 设置activeReact为当前实例，这样就可以被别的属性收集为依赖了
-    activeEffect = this
-    this.fn()
-    //  收集完成后，记得清空
-    activeEffect = undefined
+    if (!effectStack.includes(this)) {
+      try {
+        effectStack.push((activeEffect = this))
+        enableTracking()
+        return this.fn()
+      } finally {
+        resetTracking()
+        effectStack.pop()
+        /*
+        * 收集完 activeEffect 后，如果 effectStack 还有 ReactiveEffect
+        * 把当前activeEffect指向前一个effect
+        * 再effect 嵌套时会出现收集问题。
+        * TODO 待深入研究，暂时还没缕清思路
+        * */
+        const n = effectStack.length
+        activeEffect = n > 0 ? effectStack[n - 1] : undefined
+      }
+    }
+
   }
 }
 
