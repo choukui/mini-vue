@@ -1,19 +1,5 @@
-import { ref } from './reactive/ref'
-import { effect } from "./reactive/effect";
-import { reactive } from './reactive/reactive'
-
-const animal = ref('dog')
-const person = reactive({
-  name: 'job'
-})
-
-effect(() => {
-  console.log(animal.value)
-  console.log(person.name)
-})
-
-setTimeout(() => {
-  animal.value = 'dog'
-  person.name = 'bob'
-  // console.log(animal);
-}, 1000)
+import { createApp } from "./runtime-dom";
+const App = {
+  name: 'helloWorld'
+}
+createApp(App).mount('#app')
