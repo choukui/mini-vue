@@ -7,7 +7,7 @@ import {
   ComponentInternalInstance
 } from "./component";
 import {ShapeFlags} from "../shared";
-
+/********** TS类型声明 start ***********/
 export interface RendererNode {
   [key: string]: any
 }
@@ -25,7 +25,9 @@ export type RootRenderFunction<HostElement = RendererElement> = (
 export interface RendererOptions<HostNode = RendererNode, HostElement = RendererElement> {
   insert(el: HostNode, parent: HostElement): void
   createElement(type: string): HostElement
+  setElementText(node: HostElement, text: string): void
 }
+/********** TS类型声明 end ***********/
 
 type PatchFn = (
   n1: VNode | null,
@@ -59,7 +61,8 @@ function baseCreateRenderer(
 
   const {
     insert: hostInsert,
-    createElement: hostCreateElement
+    createElement: hostCreateElement,
+    setElementText: hostSetElementText
   } = options
   console.log('options' ,options);
   const patch: PatchFn = (n1, n2, container) => {
@@ -91,18 +94,24 @@ function baseCreateRenderer(
   // 挂载普通 html 元素
   const mountElement = (vnode: VNode, container: RendererElement,) => {
     let el: RendererElement
+    const { shapeFlag } = vnode
     // 创建dom元素
     el = vnode.el = hostCreateElement(vnode.type)
-    console.log('el', el);
+
+    // 如果子元素是个文本, 插入到父元素中
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      hostSetElementText(el, vnode.children as string)
+    }
     // dom插入操作，将el插入到container中
     console.log('container', container)
     hostInsert(el, container)
   }
+
   // 挂载组件
   const mountComponent: MountComponentFn = (initialVNode, container) => {
     const instance = (initialVNode.component = createComponentInstance(initialVNode))
     setupComponent(instance)
-    console.log(instance);
+    // console.log(instance);
     setupRenderEffect(instance, initialVNode, container)
   }
 
@@ -118,6 +127,7 @@ function baseCreateRenderer(
     }
     componentUpdateFn()
   }
+
   // render 函数会被 mount 方法调用
   const render: RootRenderFunction = (vnode, container) =>  {
     if (vnode == null) {

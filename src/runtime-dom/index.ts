@@ -19,8 +19,7 @@ function ensureRenderer () {
 
 function normalizeContainer(container: Element | ShadowRoot | string): Element | null {
   if (isString(container)) {
-    const res = document.querySelector(container)
-    return res
+    return document.querySelector(container)
   }
   return container as any
 }
@@ -34,6 +33,7 @@ export const createApp = (...args: any[]) => {
   app.mount = function (containerOrSelector: Element | ShadowRoot | string): any {
     // <div id='app'></div>
     const container = normalizeContainer(containerOrSelector)
+    // container
     mount(container)
   }
   return app
