@@ -1,5 +1,8 @@
-import { createApp } from "./runtime-dom";
+import { createApp, h } from "./runtime-dom";
 const App = {
-  name: 'helloWorld'
+  name: 'helloWorld',
+  render() {
+    return h('div')
+  }
 }
 createApp(App).mount('#app')

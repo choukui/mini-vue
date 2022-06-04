@@ -45,3 +45,4 @@ export const isFunction = (val: unknown): val is Function =>
 export const NOOP = () => {}
 
 export * from './makeMap'
+export * from './shapeFlags'

@@ -11,10 +11,11 @@ export type CreateAppFunction<HostElement> = (
 export function createAppAPI<HostElement>(render: RootRenderFunction): CreateAppFunction<HostElement> {
   return  function createApp (rootComponent) {
     const app: App = {
-      mount(): any {
+      mount(rootContainer: HostElement): any {
         // 创建vnode
         const vnode = createVNode(rootComponent) as VNode
-        render(vnode, rootComponent)
+        console.log(rootComponent);
+        render(vnode, rootContainer)
       }
     }
     return app

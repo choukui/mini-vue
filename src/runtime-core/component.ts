@@ -15,7 +15,9 @@ export type ConcreteComponent = ComponentOptions
 export interface ComponentInternalInstance {
   uid: number
   type: ConcreteComponent
-  render: InternalRenderFunction | null
+  render: InternalRenderFunction | null,
+  vnode: VNode,
+  subTree: VNode
 }
 
 let uid = 0
@@ -26,7 +28,9 @@ export function createComponentInstance(vnode: VNode) {
   const instance: ComponentInternalInstance = {
     uid: uid++,
     type,
+    vnode,
     render: null,
+    subTree: null!
   }
   return instance
 }
