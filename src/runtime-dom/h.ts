@@ -7,6 +7,10 @@ export function h(type: any, propsOrChildren?: any, children?: any) {
 
   if (l === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
+      // example: h('div', h('div', 'hello'))
+      if (isVNode(propsOrChildren)) {
+        return createVNode(type, null, [propsOrChildren])
+      }
       // propsOrChildren 是 props
       return createVNode(type, propsOrChildren)
     } else {
