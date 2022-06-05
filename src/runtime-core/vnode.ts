@@ -102,6 +102,8 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return createVNode(Comment)
   } else if (isArray(child)) {
     return createVNode(Fragment, null, child.slice())
+  } else if (typeof child === 'object') {
+    return child
   } else {
     return createVNode(Text, null, String(child))
   }
