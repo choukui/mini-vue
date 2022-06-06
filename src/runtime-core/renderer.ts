@@ -5,8 +5,9 @@ import {
   setupComponent,
   createComponentInstance,
   ComponentInternalInstance
-} from "./component";
-import {ShapeFlags} from "../shared";
+} from "./component"
+import { ShapeFlags } from "../shared"
+import { ReactiveEffect } from "../reactive/effect"
 /********** TS类型声明 start ***********/
 export interface RendererNode {
   [key: string]: any
@@ -161,11 +162,17 @@ function baseCreateRenderer(
     initialVNode,
     container
   ) => {
+    // 当响应式对象更新时，会重新执行componentUpdateFn函数来更新视图
     const componentUpdateFn = () => {
       const subTree = (instance.subTree = renderComponentRoot(instance))
       patch(null, subTree, container)
     }
-    componentUpdateFn()
+    // *****建立响应式关系*****
+    const effect = new ReactiveEffect(componentUpdateFn)
+    // 重新绑定this指向
+    const update = effect.run.bind(effect)
+    // 第一次挂载时，这里要手动先执行下
+    update()
   }
 
   // render 函数会被 mount 方法调用
