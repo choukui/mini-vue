@@ -2,7 +2,9 @@ import { createVNode } from "../runtime-core/vnode";
 import { isArray, isObject } from "../shared";
 import { isVNode } from "../runtime-core/vnode";
 
+// h 函数实现
 export function h(type: any, propsOrChildren?: any, children?: any) {
+
   const l = arguments.length
 
   if (l === 2) {

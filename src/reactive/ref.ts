@@ -1,14 +1,25 @@
-import { Dep, createDep } from "./dep";
+import { Dep, createDep } from "./dep"
 import { CollectionTypes } from './collectionHandlers'
-import { trackEffects, triggerEffect, isTracking } from "./effect";
-import { reactive, toRaw } from "./reactive";
-import {hasChange, isArray, isObject} from "../shared";
+import { trackEffects, triggerEffect, isTracking } from "./effect"
+import { isReactive, reactive, toRaw } from "./reactive"
+import { hasChange, isArray, isObject } from "../shared"
 type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
+/******** TS类型声明 start *********/
 export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
+
+export type ShallowUnwrapRef<T> = {
+  [K in keyof T]: T[K] extends Ref<infer V>
+    ? V
+    : T[K] extends Ref<infer V> | undefined // if `V` is `unknown` that means it does not extend `Ref` and is undefined
+      ? unknown extends V
+        ? undefined
+        : V | undefined
+      : T[K]
+}
 
 export type UnwrapRefSimple<T> = T extends
   | Function
@@ -48,6 +59,8 @@ export type CustomRefFactory<T> = (
   get: () => T
   set: (value: T) => void
 }
+/******** TS类型声明 end *********/
+
 
 // 判断是否是ref
 export function isRef(r: any): r is Ref {
@@ -197,4 +210,25 @@ function createRef(rawValue: any, shallow = false) {
 // ref 实现
 export function ref(value?:unknown) {
   return createRef(value)
+}
+
+// 解包ref
+const shallowUnwrapHandlers: ProxyHandler<any> = {
+  get: (target, key, receiver) => unref(Reflect.get(target, key, receiver)),
+  set(target: any, key: string | symbol, value: any, receiver: any): boolean {
+    const oldValue = target[key]
+    if (isRef(oldValue) && !isRef(value)) {
+      oldValue.value = value
+      return true
+    } else {
+      return Reflect.set(target, key, value, receiver)
+    }
+  }
+}
+
+// 对普通对象里的ref值进行解包
+// 在处理setup返回结果是用到了
+export function proxyRefs<T extends object>(objectWithRefs: T): ShallowUnwrapRef<T> {
+  // reactive不处理(reactive已经处理过ref解包), 只处理普通对象的ref键值
+  return isReactive(objectWithRefs) ? objectWithRefs : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }

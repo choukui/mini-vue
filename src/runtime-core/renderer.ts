@@ -131,7 +131,6 @@ function baseCreateRenderer(
       mountChildren(vnode.children as VNodeArrayChildren, el)
     }
     // dom插入操作，将el插入到container中
-    console.log('container', container)
     hostInsert(el, container)
   }
 

@@ -31,10 +31,11 @@ export const createApp = (...args: any[]) => {
   const { mount } = app
   // 这里加强下mount
   app.mount = function (containerOrSelector: Element | ShadowRoot | string): any {
-    // <div id='app'></div>
+    // 规范化container <div id='app'></div>
     const container = normalizeContainer(containerOrSelector)
     // container
     mount(container)
   }
   return app
 }
+export * from '../runtime-core'

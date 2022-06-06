@@ -44,5 +44,7 @@ export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const NOOP = () => {}
 
+export const EMPTY_OBJ: { readonly [key: string]: any } =  {}
+
 export * from './makeMap'
 export * from './shapeFlags'
