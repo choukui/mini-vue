@@ -28,7 +28,8 @@ export interface RendererOptions<HostNode = RendererNode, HostElement = Renderer
   createElement(type: string): HostElement
   setElementText(node: HostElement, text: string): void
   createText(text: string): HostNode,
-  parentNode(node: HostNode): HostElement | null
+  parentNode(node: HostNode): HostElement | null,
+  remove(el: HostNode): void
 }
 
 type MountChildrenFn = (
@@ -49,7 +50,16 @@ type PatchChildrenFn = (
   container: RendererElement,
   parentComponent: ComponentInternalInstance | null
 ) => void
-/********** TS类型声明 end ***********/
+
+type UnmountChildrenFn = (
+  children: VNode[],
+  parentComponent: ComponentInternalInstance | null
+) => void
+
+type UnmountFn = (
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null
+) => void
 
 type PatchFn = (
   n1: VNode | null,
@@ -58,6 +68,8 @@ type PatchFn = (
   parentComponent?: ComponentInternalInstance | null
 ) => void
 
+type RemoveFn = (vnode: VNode) => void
+
 export type MountComponentFn = (initialVNode: VNode, container: RendererElement) => void
 
 export type SetupRenderEffectFn = (
@@ -65,7 +77,7 @@ export type SetupRenderEffectFn = (
   initialVNode: VNode,
   container: RendererElement,
 ) => void
-
+/********** TS类型声明 end ***********/
 
 export function createRenderer<HostNode = RendererNode, HostElement = RendererElement>(
   options:RendererOptions<HostNode, HostElement>
@@ -84,6 +96,7 @@ function baseCreateRenderer(
 
   const {
     insert: hostInsert,
+    remove: hostRemove,
     createElement: hostCreateElement,
     setElementText: hostSetElementText,
     createText: hostCreateText,
@@ -189,10 +202,11 @@ function baseCreateRenderer(
         // 新节点的children是个数组
         if (shapeFlag && ShapeFlags.ARRAY_CHILDREN) {
           // 两个数组 就改比较更新了,
+          patchKeyedChildren(c1 as VNode[], c2 as VNodeArrayChildren, parentComponent, container)
           //  todo patchKeyedChildren
         } else {
           //  没有新节点，直接卸载旧节点的children
-          //  todo unmountChildren
+          unmountChildren(c1 as VNode[], parentComponent)
         }
       } else {
         // 新节点不是文本，旧节点是个文本,清除旧节点
@@ -205,6 +219,44 @@ function baseCreateRenderer(
         }
       }
     }
+  }
+
+  const patchKeyedChildren = (
+    c1: VNode[],
+    c2: VNodeArrayChildren,
+    parentComponent: ComponentInternalInstance | null,
+    container: RendererElement
+  ) => {
+    // TODO diff算法实现
+    // 因为比较难，最后在实现，暂时先暴力卸载和更新
+    unmountChildren(c1, parentComponent)
+    mountChildren(c2, container)
+  }
+
+  const unmountChildren: UnmountChildrenFn = (children, parentComponent) => {
+    for (let i = 0; i < children.length; i++) {
+      unmount(children[i], parentComponent)
+    }
+  }
+
+  const unmount: UnmountFn = (vnode, parentComponent) => {
+    const { shapeFlag } = vnode
+    if (shapeFlag & ShapeFlags.COMPONENT) {
+      // 卸载组件
+      unmountComponent(vnode.component!)
+    } else {
+     // 删除el
+      remove(vnode)
+    }
+  }
+
+  const unmountComponent = (instance: ComponentInternalInstance) => {
+    const { subTree } = instance
+    unmount(subTree, instance)
+  }
+  const remove:RemoveFn = (vnode) => {
+    const { el } = vnode
+    hostRemove(el!)
   }
 
   const mountChildren: MountChildrenFn = (
@@ -247,6 +299,8 @@ function baseCreateRenderer(
         const nextTree = renderComponentRoot(instance)
         // 旧的 vnode
         const prevTree = instance.subTree
+        // 更新实例上vnode
+        instance.subTree = nextTree
         // 开始对比更新组件
         patch(prevTree, nextTree, hostParentNode(prevTree.el!)!)
       }

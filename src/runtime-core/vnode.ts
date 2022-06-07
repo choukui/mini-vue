@@ -54,7 +54,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    console.log('children is object')
+    type = ShapeFlags.SLOTS_CHILDREN
   }
   vnode.shapeFlag |= type
 }
