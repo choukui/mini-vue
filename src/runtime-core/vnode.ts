@@ -7,16 +7,20 @@ export type VNodeNormalizedChildren = string | VNodeArrayChildren
 
 export interface VNode<
   HostNode = RendererNode,
-  HostElement = RendererElement
+  HostElement = RendererElement,
+  ExtraProps = { [key: string]: any }
 > {
   __v_isVNode: true, // vnode标识符
   component: ComponentInternalInstance | null,
   type: VNodeTypes,
   shapeFlag: number,
   el: HostNode | null,
+  props: (VNodeProps & ExtraProps) | null
   children: VNodeNormalizedChildren
 }
-export type VNodeProps = {}
+export type VNodeProps = {
+  key?: string | number | symbol
+}
 
 type VNodeTypes = string | Component
 
@@ -33,11 +37,12 @@ export type VNodeArrayChildren = Array<VNodeArrayChildren | VNodeChildAtom>
 export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 /********** TS类型声明 end ***********/
 
+// 用Symbol作为唯一标识符
 export const Comment = Symbol(undefined)
 export const Fragment = Symbol(undefined)
 export const Text = Symbol(undefined)
 
-
+// 判断是否是个vnode
 export function isVNode(value: any):value is VNode  {
   return value ? value.__v_isVNode === true : false
 }
@@ -48,6 +53,8 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   // 先实现 children 为数组的情况
   if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
+  } else if (typeof children === 'object') {
+    console.log('children is object')
   }
   vnode.shapeFlag |= type
 }
@@ -60,13 +67,17 @@ function _createVNode(
   children: unknown = null
 ): VNode {
 
+  // props class style 的处理
+  if (props) {
+    // const { class: klass } = props
+    // console.log(klass);
+  }
   // 暂时只有 element 和 component 两种类型
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : isObject(type)
     ? ShapeFlags.COMPONENT
       : 0
-
   return createBaseVNode(type, props, children, shapeFlag)
 }
 
@@ -81,6 +92,7 @@ function createBaseVNode(
   const vnode = {
     __v_isVNode: true, // vnode标识
     type,
+    props, // props
     children, // 子元素
     shapeFlag, // 元素标记
   } as VNode

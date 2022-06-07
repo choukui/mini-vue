@@ -1,5 +1,6 @@
 import { VNode, VNodeChild } from "./vnode"
 import { ComponentOptions } from "./componentOptions"
+import { initProps } from "./componentProps"
 import { ComponentPublicInstance, PublicInstanceProxyHandlers } from "./componentPublicInstance"
 import { isObject, NOOP, EMPTY_OBJ } from "../shared"
 import { pauseTracking, resetTracking } from "../reactive/effect"
@@ -25,6 +26,8 @@ export interface ComponentInternalInstance {
   ctx: Data
   proxy: ComponentPublicInstance | null,
   isMounted: boolean
+
+  props: Data
 }
 
 let uid = 0
@@ -46,13 +49,21 @@ export function createComponentInstance(vnode: VNode) {
     * 通过 this.x=… 来访问 props methods data...
     * */
     ctx: EMPTY_OBJ,
-    isMounted: false
+    isMounted: false,
+
+    props: EMPTY_OBJ
   }
   instance.ctx = { _: instance }
   return instance
 }
 
 export function setupComponent(instance: ComponentInternalInstance) {
+  // 拿到传给组件的props
+  const { props } = instance.vnode
+
+  // 初始化props
+  initProps(instance, props)
+
   setupStatefulComponent(instance)
 }
 

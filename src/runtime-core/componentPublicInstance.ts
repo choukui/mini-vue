@@ -12,11 +12,13 @@ export interface ComponentRenderContext {
 // 对 instance 组件实例访问的代理拦截 this.xxx = ....
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key) {
-    const { setupState } = instance
+    const { setupState, props } = instance
     // render访问setup数据拦截
     // 如何在 render 函数里方法setup数据就是在这一步实现的
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)){
       return setupState[key]
+    } else if (props !== EMPTY_OBJ && hasOwn(props, key )){
+      return props![key]
     }
   },
   set({ _: instance }: ComponentRenderContext, key: string | symbol, value: any): boolean {
