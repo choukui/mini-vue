@@ -23,7 +23,8 @@ export interface ComponentInternalInstance {
   subTree: VNode
   setupState: Data
   ctx: Data
-  proxy: ComponentPublicInstance | null
+  proxy: ComponentPublicInstance | null,
+  isMounted: boolean
 }
 
 let uid = 0
@@ -44,7 +45,8 @@ export function createComponentInstance(vnode: VNode) {
     * 公共实例代理的目标
     * 通过 this.x=… 来访问 props methods data...
     * */
-    ctx: EMPTY_OBJ
+    ctx: EMPTY_OBJ,
+    isMounted: false
   }
   instance.ctx = { _: instance }
   return instance

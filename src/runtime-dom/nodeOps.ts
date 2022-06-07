@@ -10,5 +10,6 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   setElementText(el, text) {
     el.textContent = text
   },
-  createText: text => doc.createTextNode(text)
+  createText: text => doc.createTextNode(text),
+  parentNode: node => node.parentNode as Element | null,
 }
