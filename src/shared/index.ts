@@ -44,6 +44,12 @@ export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const NOOP = () => {}
 
+const camelizeRE = /-(\w)/g
+
+export const camelize = (str: string): string => {
+  return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
+}
+
 export const EMPTY_OBJ: { readonly [key: string]: any } =  {}
 
 export * from './makeMap'

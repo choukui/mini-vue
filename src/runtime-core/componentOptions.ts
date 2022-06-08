@@ -1,4 +1,4 @@
-export type ComponentOptions<RawBindings = any> = ComponentOptionsBase<RawBindings>
+export type ComponentOptions<Props = {}, RawBindings = any> = ComponentOptionsBase<RawBindings>
 
 export interface ComponentOptionsBase<RawBindings> {
   render?: Function,

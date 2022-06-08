@@ -1,12 +1,13 @@
 import { VNode, VNodeChild } from "./vnode"
 import { ComponentOptions } from "./componentOptions"
-import { initProps } from "./componentProps"
+import { initProps, normalizePropsOptions, NormalizedPropsOptions, ComponentPropsOptions } from "./componentProps"
 import { ComponentPublicInstance, PublicInstanceProxyHandlers } from "./componentPublicInstance"
 import { isObject, NOOP, EMPTY_OBJ } from "../shared"
 import { pauseTracking, resetTracking } from "../reactive/effect"
 import { proxyRefs } from "../reactive/ref"
 import { markRaw } from "../reactive/reactive"
 
+/********** TS类型声明 start ***********/
 export type Component = any
 export type Data = Record<string, unknown>
 
@@ -14,7 +15,17 @@ export type InternalRenderFunction = {
   ( ctx: ComponentPublicInstance): VNodeChild
 }
 
-export type ConcreteComponent = ComponentOptions
+
+export interface FunctionalComponent<P = {}> {
+  props?: ComponentPropsOptions<P>
+}
+
+export type ConcreteComponent<
+  Props = {},
+  RawBindings = any
+> =
+  | ComponentOptions<Props, RawBindings>
+  | FunctionalComponent<Props>
 
 export interface ComponentInternalInstance {
   uid: number
@@ -28,13 +39,17 @@ export interface ComponentInternalInstance {
   isMounted: boolean
 
   props: Data
+
+  propsOptions: NormalizedPropsOptions
 }
+/********** TS类型声明 end ***********/
 
 let uid = 0
 
 // 创建组件实例
 export function createComponentInstance(vnode: VNode) {
   const type = vnode.type as ConcreteComponent
+
   const instance: ComponentInternalInstance = {
     uid: uid++,
     type,
@@ -51,8 +66,11 @@ export function createComponentInstance(vnode: VNode) {
     ctx: EMPTY_OBJ,
     isMounted: false,
 
-    props: EMPTY_OBJ
+    props: EMPTY_OBJ,
+
+    propsOptions: normalizePropsOptions(type)
   }
+
   instance.ctx = { _: instance }
   return instance
 }
