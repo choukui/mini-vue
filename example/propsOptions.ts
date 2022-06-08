@@ -13,9 +13,12 @@ const Child:any = {
   }
 }
 const App: any = {
-  name: 'helloWorld',
+  name: 'App',
   setup() {
     const count = ref(1)
+    setTimeout(() => {
+      count.value ++
+    },1000)
     return {
       count
     }

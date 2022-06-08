@@ -133,6 +133,12 @@ function baseCreateRenderer(
   // 挂载组件
   const mountComponent: MountComponentFn = (initialVNode, container) => {
     const instance = (initialVNode.component = createComponentInstance(initialVNode))
+    /*
+      * 1、为instance设置 render 函数
+      * 2、初始化data props methods等
+      * 3、初始化生命周期函数
+      * 4、执行了 beforeCreate / created 生命周期
+      * */
     setupComponent(instance)
 
     // 建立更新机制
@@ -251,8 +257,14 @@ function baseCreateRenderer(
   }
 
   const unmountComponent = (instance: ComponentInternalInstance) => {
+    // beforeUnmount hook
+    // @ts-ignore
+    console.log(`${instance.type.name}-lifeCycle: beforeUnmount`)
     const { subTree } = instance
     unmount(subTree, instance)
+    // unmount hook
+    // @ts-ignore
+    console.log(`${instance.type.name}-lifeCycle: unmount`)
   }
   const remove:RemoveFn = (vnode) => {
     const { el } = vnode
@@ -290,11 +302,24 @@ function baseCreateRenderer(
     const componentUpdateFn = () => {
       // 第一次挂载组件
       if (!instance.isMounted) {
+        // beforeMount
+        // @ts-ignore
+        console.log(`${instance.type.name}-lifeCycle: beforeMount`);
+
         // 创建 vnode,并保存在组件实例上
         const subTree = (instance.subTree = renderComponentRoot(instance))
         patch(null, subTree, container)
+
+        // mounted
+        // @ts-ignore
+        console.log(`${instance.type.name}-lifeCycle: mounted`)
         instance.isMounted = true
       } else { // 组件更新
+
+        // beforeUpdate hook
+        // @ts-ignore
+        console.log(`${instance.type.name}-lifeCycle: beforeUpdate`)
+
         // 新的 vnode
         const nextTree = renderComponentRoot(instance)
         // 旧的 vnode
@@ -303,6 +328,10 @@ function baseCreateRenderer(
         instance.subTree = nextTree
         // 开始对比更新组件
         patch(prevTree, nextTree, hostParentNode(prevTree.el!)!)
+
+        // updated hook
+        // @ts-ignore
+        console.log(`${instance.type.name}-lifeCycle: updated`)
       }
     }
     // *****建立响应式关系*****

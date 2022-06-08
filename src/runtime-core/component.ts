@@ -129,4 +129,10 @@ function finishComponentSetup(instance: ComponentInternalInstance) {
   if (!instance.render) {
     instance.render = (Component.render || NOOP) as InternalRenderFunction
   }
+  // 2.x的beforeCreate、created 的生命周期会在这里执行
+  // @ts-ignore
+  console.log(`${instance.type.name}-lifeCycle: beforeCreate`);
+  // 其他一些 option api 的代码
+  // @ts-ignore
+  console.log(`${instance.type.name}-lifeCycle: created`);
 }

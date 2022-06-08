@@ -7,6 +7,7 @@ export interface ComponentRenderContext {
   [key: string]: any,
   _: ComponentInternalInstance
 }
+export type CreateComponentPublicInstance<P = {}, B = {}> = {}
 /****** TS类型声明 end ******/
 
 // 对 instance 组件实例访问的代理拦截 this.xxx = ....
