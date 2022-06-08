@@ -1,7 +1,7 @@
 import { ComponentInternalInstance, ConcreteComponent } from "./component"
 import { Data } from "./component"
 import { shallowReactive } from "../reactive/reactive"
-import {isArray, camelize, EMPTY_OBJ, isObject, isFunction, hasOwn} from "../shared"
+import {isArray, camelize, EMPTY_OBJ, isFunction, hasOwn} from "../shared"
 
 /********** TS类型声明 start ***********/
 type PropMethod<T, TConstructor = any> = [T] extends [(...args: any) => any] // if is function with args
@@ -50,8 +50,15 @@ const enum BooleanFlags {
   shouldCastTrue
 }
 
+export function updateProps(instance: ComponentInternalInstance, rawProps: Data | null) {
+  // 这里简单更新下props
+  // 源码里比这要复杂的多。这不是现在关注的重点
+  const { props } = instance
+  setFullProps(instance, rawProps, props)
+}
+
 // 初始化props
-export function initProps (instance: ComponentInternalInstance, rawProps: Data | null,) {
+export function initProps (instance: ComponentInternalInstance, rawProps: Data | null) {
   /**
    * 如果组件声明了props, 那么才会进入到props里，
    * 没有被声明的props，则会保存在attrs里
@@ -59,7 +66,7 @@ export function initProps (instance: ComponentInternalInstance, rawProps: Data |
    * props: 储存 props
    * */
   const props: Data = {}
-  const attrs: Data = {}
+  // const attrs: Data = {}
 
   setFullProps(instance, rawProps, props)
   // 确保所有的props都是组件中定义好的。
@@ -69,7 +76,6 @@ export function initProps (instance: ComponentInternalInstance, rawProps: Data |
       props[key] = undefined
     }
   }
-
   // 暂时只考虑props的情况
   // props 转换为一个浅渲染的reactive
   instance.props = shallowReactive(props)

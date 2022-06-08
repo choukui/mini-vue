@@ -6,6 +6,7 @@ import {
   createComponentInstance,
   ComponentInternalInstance
 } from "./component"
+import { updateProps } from "./componentProps"
 import { ShapeFlags, EMPTY_ARR } from "../shared"
 import { ReactiveEffect } from "../reactive/effect"
 /********** TS类型声明 start ***********/
@@ -155,7 +156,9 @@ function baseCreateRenderer(
 
   // 更新组件
   const updateComponent = (n1: VNode, n2: VNode) => {
+    // instance是旧component
     const instance = (n2.component = n1.component)!
+    // instance.next指向新节点n2
     instance.next = n2
     instance.update()
   }
@@ -291,7 +294,7 @@ function baseCreateRenderer(
     }
   }
 
-  const unmount: UnmountFn = (vnode, parentComponent) => {
+  const unmount: UnmountFn = (vnode) => {
     const { shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
       // 卸载组件
@@ -312,6 +315,7 @@ function baseCreateRenderer(
     // @ts-ignore
     console.log(`${instance.type.name}-lifeCycle: unmount`)
   }
+
   const remove:RemoveFn = (vnode) => {
     const { el } = vnode
     hostRemove(el!)
@@ -338,6 +342,12 @@ function baseCreateRenderer(
     }
   }
 
+  const updateComponentPreRender = (instance: ComponentInternalInstance, nextVNode: VNode) => {
+    // const prevProps = instance.vnode.props
+    // nextVNode.props 新props, prevProps 旧props
+    updateProps(instance, nextVNode.props)
+  }
+
   // 建立更新机制
   const setupRenderEffect: SetupRenderEffectFn = (
     instance,
@@ -360,12 +370,19 @@ function baseCreateRenderer(
         // @ts-ignore
         console.log(`${instance.type.name}-lifeCycle: mounted`)
         instance.isMounted = true
-      } else { // 组件更新
-
+      } else {
+        // 组件更新
+        let { next, vnode } = instance
+        if (next) {
+          // 这里要更新props
+          updateComponentPreRender(instance, next)
+          next.el = vnode.el
+        } else {
+          next = vnode
+        }
         // beforeUpdate hook
         // @ts-ignore
         console.log(`${instance.type.name}-lifeCycle: beforeUpdate`)
-
         // 新的 vnode
         const nextTree = renderComponentRoot(instance)
         // 旧的 vnode
@@ -375,6 +392,7 @@ function baseCreateRenderer(
         // 开始对比更新组件
         patch(prevTree, nextTree, hostParentNode(prevTree.el!)!)
 
+        next.el = nextTree.el
         // updated hook
         // @ts-ignore
         console.log(`${instance.type.name}-lifeCycle: updated`)
