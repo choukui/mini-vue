@@ -6,6 +6,7 @@ import { isObject, NOOP, EMPTY_OBJ } from "../shared"
 import { pauseTracking, resetTracking } from "../reactive/effect"
 import { proxyRefs } from "../reactive/ref"
 import { markRaw } from "../reactive/reactive"
+import { SchedulerJob } from "./scheduler"
 
 /********** TS类型声明 start ***********/
 export type Component = any
@@ -32,7 +33,10 @@ export interface ComponentInternalInstance {
   type: ConcreteComponent
   render: InternalRenderFunction | null,
   vnode: VNode
+  next: VNode | null
   subTree: VNode
+  update: SchedulerJob
+
   setupState: Data
   ctx: Data
   proxy: ComponentPublicInstance | null,
@@ -56,6 +60,8 @@ export function createComponentInstance(vnode: VNode) {
     vnode,
     render: null,
     subTree: null!,
+    next: null,
+    update: null!,
     proxy: null,
     setupState: EMPTY_OBJ, // 储存 setupResult，前提条件 setup 返回值必须是一个对象
     // state

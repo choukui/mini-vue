@@ -51,6 +51,7 @@ export const camelize = (str: string): string => {
 }
 
 export const EMPTY_OBJ: { readonly [key: string]: any } =  {}
+export const EMPTY_ARR = []
 
 export * from './makeMap'
 export * from './shapeFlags'

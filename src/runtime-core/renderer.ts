@@ -6,7 +6,7 @@ import {
   createComponentInstance,
   ComponentInternalInstance
 } from "./component"
-import { ShapeFlags } from "../shared"
+import { ShapeFlags, EMPTY_ARR } from "../shared"
 import { ReactiveEffect } from "../reactive/effect"
 /********** TS类型声明 start ***********/
 export interface RendererNode {
@@ -53,7 +53,8 @@ type PatchChildrenFn = (
 
 type UnmountChildrenFn = (
   children: VNode[],
-  parentComponent: ComponentInternalInstance | null
+  parentComponent: ComponentInternalInstance | null,
+  start?: number | undefined
 ) => void
 
 type UnmountFn = (
@@ -104,6 +105,7 @@ function baseCreateRenderer(
   } = options
 
   const patch: PatchFn = (n1, n2, container, parentComponent = null) => {
+    if (n1 === n2) { return }
     // n2 是新的vnode，应该基于n2的类型判断
     const { type, shapeFlag } = n2
     switch (type) {
@@ -127,7 +129,13 @@ function baseCreateRenderer(
     n2: VNode,
     container: RendererElement
   ) => {
-    mountComponent(n2, container)
+    if (n1 == null) {
+      // 挂载组件
+      mountComponent(n2, container)
+    } else {
+      // 更新组件
+      updateComponent(n1, n2)
+    }
   }
 
   // 挂载组件
@@ -145,6 +153,12 @@ function baseCreateRenderer(
     setupRenderEffect(instance, initialVNode, container)
   }
 
+  // 更新组件
+  const updateComponent = (n1: VNode, n2: VNode) => {
+    const instance = (n2.component = n1.component)!
+    instance.next = n2
+    instance.update()
+  }
   const processElement = (
     n1: VNode | null,
     n2: VNode,
@@ -207,9 +221,10 @@ function baseCreateRenderer(
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         // 新节点的children是个数组
         if (shapeFlag && ShapeFlags.ARRAY_CHILDREN) {
-          // 两个数组 就改比较更新了,
-          patchKeyedChildren(c1 as VNode[], c2 as VNodeArrayChildren, parentComponent, container)
-          //  todo patchKeyedChildren
+          // 两个数组 就改比较更新了
+          // 这里应该是pathKeyedChildren, diff 算法还没实现，先用暴力更新的吧
+          patchUnkeyedChildren(c1 as VNode[], c2 as VNodeArrayChildren, parentComponent, container)
+          // patchKeyedChildren(c1 as VNode[], c2 as VNodeArrayChildren, parentComponent, container)
         } else {
           //  没有新节点，直接卸载旧节点的children
           unmountChildren(c1 as VNode[], parentComponent)
@@ -227,7 +242,7 @@ function baseCreateRenderer(
     }
   }
 
-  const patchKeyedChildren = (
+  /*const patchKeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
     parentComponent: ComponentInternalInstance | null,
@@ -237,10 +252,41 @@ function baseCreateRenderer(
     // 因为比较难，最后在实现，暂时先暴力卸载和更新
     unmountChildren(c1, parentComponent)
     mountChildren(c2, container)
+  }*/
+  const patchUnkeyedChildren = (
+    c1: VNode[],
+    c2: VNodeArrayChildren,
+    parentComponent: ComponentInternalInstance | null,
+    container: RendererElement
+  ) => {
+    c1 = c1 || EMPTY_ARR
+    c2 = c2 || EMPTY_ARR
+    const oldLength = c1.length
+    const newLength = c2.length
+    // 找到两个数组length最小的
+    const commonLength = Math.min(oldLength, newLength)
+    // 循环最小的
+    for (let i = 0; i < commonLength; i++) {
+      const nextChild = c2[i]
+      patch(c1[i], nextChild as VNode, container, parentComponent)
+    }
+    // 循环结束后，如果oldLength 大于 commonLength
+    // 证明old children里多余的元素要卸载
+    if (oldLength > commonLength) {
+      // 移除旧节点
+      unmountChildren(c1, parentComponent)
+    } else {
+      // 挂载新节点
+      mountChildren(c2, container, commonLength)
+    }
   }
 
-  const unmountChildren: UnmountChildrenFn = (children, parentComponent) => {
-    for (let i = 0; i < children.length; i++) {
+  const unmountChildren: UnmountChildrenFn = (
+    children,
+    parentComponent,
+    start = 0
+  ) => {
+    for (let i = start; i < children.length; i++) {
       unmount(children[i], parentComponent)
     }
   }
@@ -337,7 +383,8 @@ function baseCreateRenderer(
     // *****建立响应式关系*****
     const effect = new ReactiveEffect(componentUpdateFn)
     // 重新绑定this指向
-    const update = effect.run.bind(effect)
+    // componentUpdateFn 赋值给instance.update 在updateComponent时还会调用
+    const update = (instance.update = effect.run.bind(effect))
     // 第一次挂载时，这里要手动先执行下
     update()
   }
