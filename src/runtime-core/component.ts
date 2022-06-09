@@ -1,5 +1,5 @@
 import { VNode, VNodeChild } from "./vnode"
-import { ComponentOptions } from "./componentOptions"
+import { applyOptions, ComponentOptions, ComputedOptions, MethodOptions } from "./componentOptions"
 import { initProps, normalizePropsOptions, NormalizedPropsOptions, ComponentPropsOptions } from "./componentProps"
 import { ComponentPublicInstance, PublicInstanceProxyHandlers } from "./componentPublicInstance"
 import { isObject, NOOP, EMPTY_OBJ } from "../shared"
@@ -7,6 +7,7 @@ import { pauseTracking, resetTracking } from "../reactive/effect"
 import { proxyRefs } from "../reactive/ref"
 import { markRaw } from "../reactive/reactive"
 import { SchedulerJob } from "./scheduler"
+import { EmitsOptions } from "./componentEmits"
 
 /********** TS类型声明 start ***********/
 export type Component = any
@@ -16,17 +17,27 @@ export type InternalRenderFunction = {
   ( ctx: ComponentPublicInstance): VNodeChild
 }
 
+export interface ComponentInternalOptions {}
 
-export interface FunctionalComponent<P = {}> {
+export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
+  extends ComponentInternalOptions {
+  // use of any here is intentional so it can be a valid JSX Element constructor
+  // (props: P, ctx: Omit<SetupContext<E>, 'expose'>): any
   props?: ComponentPropsOptions<P>
+  emits?: E | (keyof E)[]
+  inheritAttrs?: boolean
+  displayName?: string
 }
 
 export type ConcreteComponent<
   Props = {},
-  RawBindings = any
-> =
-  | ComponentOptions<Props, RawBindings>
-  | FunctionalComponent<Props>
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions
+  > =
+  | ComponentOptions<Props, RawBindings, D, C, M>
+  | FunctionalComponent<Props, any>
 
 export interface ComponentInternalInstance {
   uid: number
@@ -43,6 +54,7 @@ export interface ComponentInternalInstance {
   isMounted: boolean
 
   props: Data
+  data: Data
 
   propsOptions: NormalizedPropsOptions
 }
@@ -73,6 +85,7 @@ export function createComponentInstance(vnode: VNode) {
     isMounted: false,
 
     props: EMPTY_OBJ,
+    data: EMPTY_OBJ,
 
     propsOptions: normalizePropsOptions(type)
   }
@@ -135,10 +148,13 @@ function finishComponentSetup(instance: ComponentInternalInstance) {
   if (!instance.render) {
     instance.render = (Component.render || NOOP) as InternalRenderFunction
   }
-  // 2.x的beforeCreate、created 的生命周期会在这里执行
-  // @ts-ignore
-  console.log(`${instance.type.name}-lifeCycle: beforeCreate`);
-  // 其他一些 option api 的代码
-  // @ts-ignore
-  console.log(`${instance.type.name}-lifeCycle: created`);
+
+  /*  support 2 */
+  // 暂停收集
+  pauseTracking()
+  //  vue2.x option api
+  applyOptions(instance)
+  // 恢复收集
+  resetTracking()
+  /*  support 2 */
 }

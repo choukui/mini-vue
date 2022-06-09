@@ -4,7 +4,7 @@ import { isFunction, NOOP } from "../shared";
 import { ReactiveFlags, toRaw } from "./reactive";
 import { Dep } from "./dep";
 
-type ComputedGetter<T> = (...args: any[]) => T
+export type ComputedGetter<T> = (...args: any[]) => T
 type ComputedSetter<T> = (v: T) => void
 
 export interface WritableComputedOptions<T> {
