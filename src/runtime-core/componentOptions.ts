@@ -2,7 +2,8 @@ import { CreateComponentPublicInstance } from "./componentPublicInstance"
 import { ComponentInternalInstance, ComponentInternalOptions } from './component'
 import { ComputedGetter, WritableComputedOptions } from "../reactive/computed"
 import { EmitsOptions } from "./componentEmits"
-import {reactive} from "../reactive/reactive";
+import { reactive } from "../reactive/reactive"
+import { isFunction } from "../shared"
 
 /********** TS类型声明 start ***********/
 
@@ -136,15 +137,29 @@ export function applyOptions(instance: ComponentInternalInstance) {
   console.log(`${instance.type.name}-lifeCycle: beforeCreate`);
 
   const publicThis = instance.proxy!
+  const ctx = instance.ctx
 
   // resolveMergedOptions 为了类型不报错
-  const { data: dataOptions } = resolveMergedOptions(instance)
+  const { data: dataOptions, methods } = resolveMergedOptions(instance)
 
   if (dataOptions) {
     // 拿到data返回的对象
     const data = (dataOptions as any).call(publicThis, publicThis)
     // 把data转换成响应式的
     instance.data = reactive(data)
+  }
+
+  // option methods 处理
+  if (methods) {
+    for (const key in methods) {
+      const methodHandler = methods[key]
+      // 确保是个函数
+      if (isFunction(methodHandler)) {
+        // 挂载到ctx, 为了以后this.xxx()调用
+        // this.xxx() 实际就是访问ctx上的函数名
+        ctx[key] = methodHandler.bind(publicThis)
+      }
+    }
   }
 
   // created hook

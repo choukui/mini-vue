@@ -106,7 +106,7 @@ export type CreateComponentPublicInstance<
 // 对 instance 组件实例访问的代理拦截 this.xxx = ....
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key) {
-    const { setupState, props, data } = instance
+    const { setupState, props, data, ctx } = instance
     // render访问setup数据拦截
     // 如何在 render 函数里方法setup数据就是在这一步实现的
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
@@ -117,10 +117,13 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     } else if (props !== EMPTY_OBJ && hasOwn(props, key )) {
       // 访问 option props
       return props![key]
+    } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
+      // option methods 会被挂在到ctx下
+      return ctx![key]
     }
   },
-  set({ _: instance }: ComponentRenderContext, key: string | symbol, value: any): boolean {
-    const { setupState, data } = instance
+  set({ _: instance }: ComponentRenderContext, key: string, value: any): boolean {
+    const { setupState, data, ctx } = instance
 
     // 在render里设置 setup 的数据是在这一步实现的
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
@@ -128,6 +131,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       // 设置 options data
       data[key] = value
+    } else {
+      ctx[key] = value
     }
     return true
   }

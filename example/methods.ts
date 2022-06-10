@@ -25,12 +25,20 @@ const App: any = {
       name: 'job'
     }
   },
+  methods: {
+    getName (): string {
+      // @ts-ignore
+      console.log(this.name)
+      // @ts-ignore
+      return this.name
+    }
+  },
   render() {
     return h(
       'div',
       [
         h(Child, { class: this.count }),
-        h('div', this.name)
+        h('div', this.getName())
       ]
     )
   }
