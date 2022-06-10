@@ -55,6 +55,9 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
     type = ShapeFlags.SLOTS_CHILDREN
+  } else {
+    children = String(children)
+    type = ShapeFlags.TEXT_CHILDREN
   }
   vnode.shapeFlag |= type
 }
@@ -78,7 +81,7 @@ function _createVNode(
     : isObject(type)
     ? ShapeFlags.COMPONENT
       : 0
-  return createBaseVNode(type, props, children, shapeFlag)
+  return createBaseVNode(type, props, children, shapeFlag, true)
 }
 
 // 创建vnode
