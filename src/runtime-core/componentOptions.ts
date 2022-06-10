@@ -1,9 +1,9 @@
 import { CreateComponentPublicInstance } from "./componentPublicInstance"
 import { ComponentInternalInstance, ComponentInternalOptions } from './component'
-import { ComputedGetter, WritableComputedOptions } from "../reactive/computed"
+import { computed, ComputedGetter, WritableComputedOptions } from "../reactive/computed"
 import { EmitsOptions } from "./componentEmits"
 import { reactive } from "../reactive/reactive"
-import { isFunction } from "../shared"
+import { isFunction, NOOP } from "../shared"
 
 /********** TS类型声明 start ***********/
 
@@ -140,7 +140,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
   const ctx = instance.ctx
 
   // resolveMergedOptions 为了类型不报错
-  const { data: dataOptions, methods } = resolveMergedOptions(instance)
+  const { data: dataOptions, methods, computed: computedOptions } = resolveMergedOptions(instance)
 
   if (dataOptions) {
     // 拿到data返回的对象
@@ -159,6 +159,30 @@ export function applyOptions(instance: ComponentInternalInstance) {
         // this.xxx() 实际就是访问ctx上的函数名
         ctx[key] = methodHandler.bind(publicThis)
       }
+    }
+  }
+
+  // option computed 处理
+  if (computedOptions) {
+    for (const key in computedOptions) {
+      const opt = computedOptions[key]
+      // 拿到get函数，拿不到就赋值个空函数
+      const get = isFunction(opt) ? opt.bind(publicThis) : isFunction(opt.get) ? opt.get.bind(publicThis) : NOOP
+      // 拿到set函数
+      const set = !isFunction(opt) && isFunction(opt.set) ? opt.set.bind(publicThis) : NOOP
+      // 调用reactive 里的 computed
+      // computed 是个 ref
+      const c = computed({
+        get,
+        set
+      })
+      // 在ctx上定义相同的字段，可以this.xxx 访问到computed属性
+      Object.defineProperty(ctx, key, {
+        enumerable: true,
+        configurable: true,
+        get: () => c.value,
+        set: v => c.value = v
+      })
     }
   }
 

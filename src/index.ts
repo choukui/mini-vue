@@ -1,4 +1,5 @@
 // import '../example/updateProps'
 // import '../example/propsOptions'
 // import '../example/data'
-import '../example/methods'
+// import '../example/methods'
+import '../example/computed'
