@@ -2,4 +2,5 @@
 // import '../example/propsOptions'
 // import '../example/data'
 // import '../example/methods'
-import '../example/computed'
+// import '../example/computed'
+import '../example/lifeCycle'

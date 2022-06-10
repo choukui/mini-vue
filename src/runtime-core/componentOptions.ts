@@ -79,8 +79,10 @@ interface LegacyOptions<
   Extends extends ComponentOptionsMixin
   > {
   [key: string]: any
-
   data?: () => any
+
+  beforeCreate?(): void
+  created?(): void
 }
 
 export interface ComponentCustomOptions {}
@@ -131,16 +133,25 @@ export type MergedComponentOptionsOverride = {
 
 /********** TS类型声明 end ***********/
 
-export function applyOptions(instance: ComponentInternalInstance) {
-  // beforeCreate hook
-  // @ts-ignore
-  console.log(`${instance.type.name}-lifeCycle: beforeCreate`);
+// 调用hook并改变this指向
+function callHook(hook: Function, instance: ComponentInternalInstance) {
+  if (isFunction(hook)) {
+    hook.call(instance.proxy)
+  }
+}
 
+export function applyOptions(instance: ComponentInternalInstance) {
+  const options = resolveMergedOptions(instance)
   const publicThis = instance.proxy!
   const ctx = instance.ctx
 
+  // call beforeCreate hook
+  if (options.beforeCreate) {
+    callHook(options.beforeCreate, instance)
+  }
+
   // resolveMergedOptions 为了类型不报错
-  const { data: dataOptions, methods, computed: computedOptions } = resolveMergedOptions(instance)
+  const { data: dataOptions, methods, computed: computedOptions } = options
 
   if (dataOptions) {
     // 拿到data返回的对象
@@ -186,9 +197,12 @@ export function applyOptions(instance: ComponentInternalInstance) {
     }
   }
 
-  // created hook
-  // @ts-ignore
-  console.log(`${instance.type.name}-lifeCycle: created`);
+  // todo watch 未实现
+
+  // call created hook
+  if (options.created) {
+    callHook(options.created, instance)
+  }
 }
 
 export function resolveMergedOptions(
