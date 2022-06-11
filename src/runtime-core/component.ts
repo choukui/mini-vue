@@ -8,6 +8,7 @@ import { proxyRefs } from "../reactive/ref"
 import { markRaw } from "../reactive/reactive"
 import { SchedulerJob } from "./scheduler"
 import { EmitsOptions } from "./componentEmits"
+import { AppContext, createAppContext } from "./apiCreateApp"
 
 /********** TS类型声明 start ***********/
 export type Component = any
@@ -67,6 +68,8 @@ export interface ComponentInternalInstance {
   subTree: VNode
   update: SchedulerJob
 
+  appContext: AppContext
+
   setupState: Data
   ctx: Data
   proxy: ComponentPublicInstance | null,
@@ -97,14 +100,22 @@ export function unsetCurrentInstance() {
   currentInstance = null
 }
 
+// 创建app上下文
+const emptyAppContext = createAppContext()
+
 // 创建组件实例
-export function createComponentInstance(vnode: VNode) {
+export function createComponentInstance(vnode: VNode, parent: ComponentInternalInstance | null) {
   const type = vnode.type as ConcreteComponent
+
+  // appContext 全局就一个，子组件都指向父组件的appContext, 全局共享
+  // 层层向上查找 最终指向了根组件的appContext
+  const appContext = (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
   const instance: ComponentInternalInstance = {
     uid: uid++,
     type,
     vnode,
+    appContext,
     render: null,
     subTree: null!,
     next: null,

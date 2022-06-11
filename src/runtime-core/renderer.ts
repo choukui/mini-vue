@@ -36,6 +36,7 @@ export interface RendererOptions<HostNode = RendererNode, HostElement = Renderer
 type MountChildrenFn = (
   children: VNodeArrayChildren,
   container: RendererElement,
+  parentComponent: ComponentInternalInstance | null,
   start?: number | undefined
 ) => void
 
@@ -72,7 +73,11 @@ type PatchFn = (
 
 type RemoveFn = (vnode: VNode) => void
 
-export type MountComponentFn = (initialVNode: VNode, container: RendererElement) => void
+export type MountComponentFn = (
+  initialVNode: VNode,
+  container: RendererElement,
+  parentComponent: ComponentInternalInstance | null
+) => void
 
 export type SetupRenderEffectFn = (
   instance: ComponentInternalInstance,
@@ -119,7 +124,7 @@ function baseCreateRenderer(
           processElement(n1, n2, container, parentComponent)
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           // 处理组件类型
-          processComponent(n1, n2, container)
+          processComponent(n1, n2, container, parentComponent)
         }
     }
 
@@ -128,11 +133,12 @@ function baseCreateRenderer(
   const processComponent = (
     n1: VNode | null,
     n2: VNode,
-    container: RendererElement
+    container: RendererElement,
+    parentComponent: ComponentInternalInstance | null
   ) => {
     if (n1 == null) {
       // 挂载组件
-      mountComponent(n2, container)
+      mountComponent(n2, container, parentComponent)
     } else {
       // 更新组件
       updateComponent(n1, n2)
@@ -140,8 +146,11 @@ function baseCreateRenderer(
   }
 
   // 挂载组件
-  const mountComponent: MountComponentFn = (initialVNode, container) => {
-    const instance = (initialVNode.component = createComponentInstance(initialVNode))
+  const mountComponent: MountComponentFn = (
+    initialVNode,
+    container,
+    parentComponent) => {
+    const instance = (initialVNode.component = createComponentInstance(initialVNode, parentComponent))
     /*
       * 1、为instance设置 render 函数
       * 2、初始化data props methods等
@@ -170,14 +179,18 @@ function baseCreateRenderer(
   ) => {
     // 没有旧节点，挂载元素
     if (n1 == null) {
-      mountElement(n2, container)
+      mountElement(n2, container, parentComponent)
     } else {
       patchElement(n1, n2, parentComponent)
     }
   }
 
   // 挂载普通 html 元素
-  const mountElement = (vnode: VNode, container: RendererElement,) => {
+  const mountElement = (
+    vnode: VNode,
+    container: RendererElement,
+    parentComponent: ComponentInternalInstance | null
+    ) => {
     let el: RendererElement
     const { shapeFlag } = vnode
     // 创建dom元素
@@ -187,7 +200,7 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
     } if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(vnode.children as VNodeArrayChildren, el)
+      mountChildren(vnode.children as VNodeArrayChildren, el, parentComponent)
     }
     // dom插入操作，将el插入到container中
     hostInsert(el, container)
@@ -239,7 +252,7 @@ function baseCreateRenderer(
         }
         // 新节点是个数组，开始挂载
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          mountChildren(c2 as VNodeArrayChildren, container)
+          mountChildren(c2 as VNodeArrayChildren, container, parentComponent)
         }
       }
     }
@@ -280,7 +293,7 @@ function baseCreateRenderer(
       unmountChildren(c1, parentComponent)
     } else {
       // 挂载新节点
-      mountChildren(c2, container, commonLength)
+      mountChildren(c2, container, parentComponent, commonLength)
     }
   }
 
@@ -329,11 +342,12 @@ function baseCreateRenderer(
   const mountChildren: MountChildrenFn = (
     children,
     container,
+    parentComponent,
     start = 0
   ) => {
     for (let i = start; i < children.length; i++) {
       const child = normalizeVNode(children[i])
-      patch(null, child, container)
+      patch(null, child, container, parentComponent)
     }
   }
 
@@ -401,7 +415,7 @@ function baseCreateRenderer(
         // 更新实例上vnode
         instance.subTree = nextTree
         // 开始对比更新组件
-        patch(prevTree, nextTree, hostParentNode(prevTree.el!)!)
+        patch(prevTree, nextTree, hostParentNode(prevTree.el!)!, instance)
 
         next.el = nextTree.el
         // updated hook
@@ -424,7 +438,7 @@ function baseCreateRenderer(
     if (vnode == null) {
 
     } else {
-      patch(null, vnode, container)
+      patch(null, vnode, container, null)
     }
   }
   return {

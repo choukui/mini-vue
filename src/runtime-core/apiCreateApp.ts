@@ -1,5 +1,6 @@
 import { RootRenderFunction } from "./renderer";
 import { Component } from "./component";
+import { ComponentOptions } from "./componentOptions";
 import { VNode, createVNode } from "./vnode";
 
 /****** TS类型声明 start ******/
@@ -8,7 +9,17 @@ export interface App<HostElement = any> {}
 export type CreateAppFunction<HostElement> = (
   rootComponent: Component
 ) => App<HostElement>
+export interface AppContext {
+  mixins: ComponentOptions[]
+}
 /****** TS类型声明 end ******/
+
+// 创建app上下文，全局属性会挂载到appContext上
+export function createAppContext(): AppContext {
+  return {
+    mixins: []
+  }
+}
 
 export function createAppAPI<HostElement>(render: RootRenderFunction): CreateAppFunction<HostElement> {
   return  function createApp (rootComponent, rootProps = null) {

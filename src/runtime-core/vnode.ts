@@ -1,6 +1,7 @@
-import {RendererElement, RendererNode} from "./renderer";
-import {Component, ComponentInternalInstance, Data} from "./component";
-import {isArray, isObject, isString, ShapeFlags} from "../shared";
+import { RendererElement, RendererNode } from "./renderer"
+import { Component, ComponentInternalInstance, Data } from "./component"
+import { isArray, isObject, isString, ShapeFlags } from "../shared"
+import { AppContext } from "./apiCreateApp"
 
 /********** TS类型声明 start ***********/
 export type VNodeNormalizedChildren = string | VNodeArrayChildren
@@ -17,6 +18,8 @@ export interface VNode<
   el: HostNode | null,
   props: (VNodeProps & ExtraProps) | null
   children: VNodeNormalizedChildren
+
+  appContext: AppContext | null
 }
 export type VNodeProps = {
   key?: string | number | symbol
