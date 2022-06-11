@@ -4,7 +4,7 @@ import { computed, ComputedGetter, WritableComputedOptions } from "../reactive/c
 import { EmitsOptions } from "./componentEmits"
 import { reactive } from "../reactive/reactive"
 import { isFunction, NOOP } from "../shared"
-import { onBeforeMount, onMount, onBeforeUpdate, onUpdated } from "./apiLifecyle";
+import { onBeforeMount, onMount, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted } from "./apiLifecyle";
 
 /********** TS类型声明 start ***********/
 
@@ -88,6 +88,8 @@ interface LegacyOptions<
   mounted?(): void
   beforeUpdate?(): void
   updated?(): void
+  beforeUnmount?(): void
+  unmounted?(): void
 }
 
 export interface ComponentCustomOptions {}
@@ -163,7 +165,9 @@ export function applyOptions(instance: ComponentInternalInstance) {
     beforeMount,
     mounted,
     beforeUpdate,
-    updated
+    updated,
+    beforeUnmount,
+    unmounted
   } = options
 
   if (dataOptions) {
@@ -228,6 +232,8 @@ export function applyOptions(instance: ComponentInternalInstance) {
   registerLifecycleHook(onMount, mounted)
   registerLifecycleHook(onBeforeUpdate, beforeUpdate)
   registerLifecycleHook(onUpdated, updated)
+  registerLifecycleHook(onBeforeUnmount, beforeUnmount)
+  registerLifecycleHook(onUnmounted, unmounted)
 }
 
 export function resolveMergedOptions(

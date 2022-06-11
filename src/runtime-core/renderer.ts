@@ -306,14 +306,19 @@ function baseCreateRenderer(
   }
 
   const unmountComponent = (instance: ComponentInternalInstance) => {
+
+    const { bum, um } = instance
+
     // beforeUnmount hook
-    // @ts-ignore
-    console.log(`${instance.type.name}-lifeCycle: beforeUnmount`)
+    if (bum) {
+      invokeArrayFns(bum)
+    }
     const { subTree } = instance
     unmount(subTree, instance)
     // unmount hook
-    // @ts-ignore
-    console.log(`${instance.type.name}-lifeCycle: unmount`)
+    if (um) {
+      invokeArrayFns(um)
+    }
   }
 
   const remove:RemoveFn = (vnode) => {
@@ -374,8 +379,6 @@ function baseCreateRenderer(
         if (m) {
           invokeArrayFns(m)
         }
-        // @ts-ignore
-        // console.log(`${instance.type.name}-lifeCycle: mounted`)
         instance.isMounted = true
       } else {
         // 组件更新
