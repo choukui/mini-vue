@@ -379,7 +379,7 @@ function baseCreateRenderer(
         instance.isMounted = true
       } else {
         // 组件更新
-        let { next, vnode } = instance
+        let { next, vnode, bu, u } = instance
         if (next) {
           // 这里要更新props
           updateComponentPreRender(instance, next)
@@ -388,8 +388,9 @@ function baseCreateRenderer(
           next = vnode
         }
         // beforeUpdate hook
-        // @ts-ignore
-        console.log(`${instance.type.name}-lifeCycle: beforeUpdate`)
+        if (bu) {
+          invokeArrayFns(bu)
+        }
         // 新的 vnode
         const nextTree = renderComponentRoot(instance)
         // 旧的 vnode
@@ -401,8 +402,9 @@ function baseCreateRenderer(
 
         next.el = nextTree.el
         // updated hook
-        // @ts-ignore
-        console.log(`${instance.type.name}-lifeCycle: updated`)
+        if (u) {
+          invokeArrayFns(u)
+        }
       }
     }
     // *****建立响应式关系*****

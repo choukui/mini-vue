@@ -19,8 +19,11 @@ const App: any = {
   // beforeMount(){
   //   console.log('instance: beforeMount')
   // },
-  mounted(){
-    console.log('instance: mounted')
+  // mounted(){
+  //   console.log('instance: mounted')
+  // },
+  beforeUpdate(){
+    console.log('instance: beforeUpdate')
   },
   computed: {
     getName (): number {

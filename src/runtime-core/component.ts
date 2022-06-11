@@ -20,8 +20,8 @@ export const enum LifecycleHooks {
   // CREATED = 'c',
   BEFORE_MOUNT = 'bm',
   MOUNTED = 'm',
-  // BEFORE_UPDATE = 'bu',
-  // UPDATED = 'u',
+  BEFORE_UPDATE = 'bu',
+  UPDATED = 'u',
   // BEFORE_UNMOUNT = 'bum',
   // UNMOUNTED = 'um',
   // DEACTIVATED = 'da',
@@ -79,6 +79,8 @@ export interface ComponentInternalInstance {
 
   [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
   [LifecycleHooks.MOUNTED]: LifecycleHook
+  [LifecycleHooks.BEFORE_UPDATE]: LifecycleHook
+  [LifecycleHooks.UPDATED]: LifecycleHook
 }
 /********** TS类型声明 end ***********/
 
@@ -111,8 +113,10 @@ export function createComponentInstance(vnode: VNode) {
 
     propsOptions: normalizePropsOptions(type),
 
-    bm: null,
-    m: null
+    bm: null, // beforeMounted
+    m: null, // mounted
+    bu: null, // beforeUpdated
+    u: null, // mounted
   }
 
   instance.ctx = { _: instance }

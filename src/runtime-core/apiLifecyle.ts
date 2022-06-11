@@ -22,3 +22,5 @@ export const createHook = <T extends Function = () => any>(lifecycle: LifecycleH
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMount = createHook(LifecycleHooks.MOUNTED)
+export const onBeforeUpdate = createHook(LifecycleHooks.BEFORE_UPDATE)
+export const onUpdated = createHook(LifecycleHooks.UPDATED)
