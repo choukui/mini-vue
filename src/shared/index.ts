@@ -53,5 +53,11 @@ export const camelize = (str: string): string => {
 export const EMPTY_OBJ: { readonly [key: string]: any } =  {}
 export const EMPTY_ARR = []
 
+export const invokeArrayFns = (fns: Function[], arg?: any) => {
+  for (let i = 0; i < fns.length; i++) {
+    fns[i](arg)
+  }
+}
+
 export * from './makeMap'
 export * from './shapeFlags'

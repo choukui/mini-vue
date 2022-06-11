@@ -10,11 +10,17 @@ const App: any = {
       count
     }
   },
-  beforeCreate(){
-    console.log('instance: beforeCreated')
-  },
-  created(){
-    console.log('instance: created')
+  // beforeCreate(){
+  //   console.log('instance: beforeCreated')
+  // },
+  // created(){
+  //   console.log('instance: created')
+  // },
+  // beforeMount(){
+  //   console.log('instance: beforeMount')
+  // },
+  mounted(){
+    console.log('instance: mounted')
   },
   computed: {
     getName (): number {

@@ -7,7 +7,7 @@ import {
   ComponentInternalInstance
 } from "./component"
 import { updateProps } from "./componentProps"
-import { ShapeFlags, EMPTY_ARR } from "../shared"
+import { ShapeFlags, invokeArrayFns, EMPTY_ARR } from "../shared"
 import { ReactiveEffect } from "../reactive/effect"
 /********** TS类型声明 start ***********/
 export interface RendererNode {
@@ -358,17 +358,24 @@ function baseCreateRenderer(
     const componentUpdateFn = () => {
       // 第一次挂载组件
       if (!instance.isMounted) {
-        // beforeMount
-        // @ts-ignore
-        console.log(`${instance.type.name}-lifeCycle: beforeMount`);
+
+        const { bm, m } = instance
+
+        // beforeMount hook
+        if (bm) {
+          invokeArrayFns(bm)
+        }
 
         // 创建 vnode,并保存在组件实例上
         const subTree = (instance.subTree = renderComponentRoot(instance))
         patch(null, subTree, container)
 
         // mounted
+        if (m) {
+          invokeArrayFns(m)
+        }
         // @ts-ignore
-        console.log(`${instance.type.name}-lifeCycle: mounted`)
+        // console.log(`${instance.type.name}-lifeCycle: mounted`)
         instance.isMounted = true
       } else {
         // 组件更新

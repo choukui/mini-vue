@@ -13,6 +13,25 @@ import { EmitsOptions } from "./componentEmits"
 export type Component = any
 export type Data = Record<string, unknown>
 
+type LifecycleHook<TFn = Function> = TFn[] | null
+
+export const enum LifecycleHooks {
+  // BEFORE_CREATE = 'bc',
+  // CREATED = 'c',
+  BEFORE_MOUNT = 'bm',
+  MOUNTED = 'm',
+  // BEFORE_UPDATE = 'bu',
+  // UPDATED = 'u',
+  // BEFORE_UNMOUNT = 'bum',
+  // UNMOUNTED = 'um',
+  // DEACTIVATED = 'da',
+  // ACTIVATED = 'a',
+  // RENDER_TRIGGERED = 'rtg',
+  // RENDER_TRACKED = 'rtc',
+  // ERROR_CAPTURED = 'ec',
+  // SERVER_PREFETCH = 'sp'
+}
+
 export type InternalRenderFunction = {
   ( ctx: ComponentPublicInstance): VNodeChild
 }
@@ -57,6 +76,9 @@ export interface ComponentInternalInstance {
   data: Data
 
   propsOptions: NormalizedPropsOptions
+
+  [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
+  [LifecycleHooks.MOUNTED]: LifecycleHook
 }
 /********** TS类型声明 end ***********/
 
@@ -87,7 +109,10 @@ export function createComponentInstance(vnode: VNode) {
     props: EMPTY_OBJ,
     data: EMPTY_OBJ,
 
-    propsOptions: normalizePropsOptions(type)
+    propsOptions: normalizePropsOptions(type),
+
+    bm: null,
+    m: null
   }
 
   instance.ctx = { _: instance }

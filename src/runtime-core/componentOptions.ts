@@ -4,6 +4,7 @@ import { computed, ComputedGetter, WritableComputedOptions } from "../reactive/c
 import { EmitsOptions } from "./componentEmits"
 import { reactive } from "../reactive/reactive"
 import { isFunction, NOOP } from "../shared"
+import { onBeforeMount, onMount } from "./apiLifecyle";
 
 /********** TS类型声明 start ***********/
 
@@ -83,6 +84,8 @@ interface LegacyOptions<
 
   beforeCreate?(): void
   created?(): void
+  beforeMount?(): void
+  mounted?(): void
 }
 
 export interface ComponentCustomOptions {}
@@ -151,7 +154,13 @@ export function applyOptions(instance: ComponentInternalInstance) {
   }
 
   // resolveMergedOptions 为了类型不报错
-  const { data: dataOptions, methods, computed: computedOptions } = options
+  const {
+    data: dataOptions,
+    methods,
+    computed: computedOptions,
+    beforeMount,
+    mounted
+  } = options
 
   if (dataOptions) {
     // 拿到data返回的对象
@@ -199,10 +208,20 @@ export function applyOptions(instance: ComponentInternalInstance) {
 
   // todo watch 未实现
 
+  function registerLifecycleHook(register: Function, hook?: Function) {
+    // 这里手动传入 instance, 源码里是 currentInstance
+    if (hook) {
+      register((hook as Function).bind(publicThis), instance)
+    }
+  }
   // call created hook
   if (options.created) {
     callHook(options.created, instance)
   }
+
+  // 注册生命周期函数，在合适的时机调用
+  registerLifecycleHook(onBeforeMount, beforeMount)
+  registerLifecycleHook(onMount, mounted)
 }
 
 export function resolveMergedOptions(
