@@ -1,4 +1,4 @@
-import { ComponentInternalInstance, LifecycleHooks } from "./component"
+import { ComponentInternalInstance, currentInstance, LifecycleHooks } from "./component"
 
 // 给组件实例注入生命周期钩子
 export function injectHook(
@@ -18,8 +18,11 @@ export function injectHook(
 }
 
 // 创建生命周期钩子
-export const createHook = <T extends Function = () => any>(lifecycle: LifecycleHooks) => (hook: T, target: ComponentInternalInstance | null) => injectHook(lifecycle, hook, target)
+export const createHook = <T extends Function = () => any >(lifecycle: LifecycleHooks) =>
+  (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+    injectHook(lifecycle, hook, target)
 
+// 函数柯里化
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMount = createHook(LifecycleHooks.MOUNTED)
 export const onBeforeUpdate = createHook(LifecycleHooks.BEFORE_UPDATE)

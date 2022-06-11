@@ -88,6 +88,15 @@ export interface ComponentInternalInstance {
 
 let uid = 0
 
+// 当前实例
+export let currentInstance: ComponentInternalInstance | null = null
+export function setCurrentInstance(instance: ComponentInternalInstance) {
+  currentInstance = instance
+}
+export function unsetCurrentInstance() {
+  currentInstance = null
+}
+
 // 创建组件实例
 export function createComponentInstance(vnode: VNode) {
   const type = vnode.type as ConcreteComponent
@@ -183,11 +192,15 @@ function finishComponentSetup(instance: ComponentInternalInstance) {
   }
 
   /*  support 2 */
+  // 设置全局currentInstance为当前实例
+  setCurrentInstance(instance)
   // 暂停收集
   pauseTracking()
   //  vue2.x option api
   applyOptions(instance)
   // 恢复收集
   resetTracking()
+  // 设置全局currentInstance为 null
+  unsetCurrentInstance()
   /*  support 2 */
 }

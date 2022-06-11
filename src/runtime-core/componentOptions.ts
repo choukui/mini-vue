@@ -219,7 +219,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
   function registerLifecycleHook(register: Function, hook?: Function) {
     // 这里手动传入 instance, 源码里是 currentInstance
     if (hook) {
-      register((hook as Function).bind(publicThis), instance)
+      register((hook as Function).bind(publicThis))
     }
   }
   // call created hook
