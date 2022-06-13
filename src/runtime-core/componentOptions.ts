@@ -81,7 +81,6 @@ interface LegacyOptions<
   > {
   [key: string]: any
   data?: () => any
-
   beforeCreate?(): void
   created?(): void
   beforeMount?(): void
@@ -90,6 +89,8 @@ interface LegacyOptions<
   updated?(): void
   beforeUnmount?(): void
   unmounted?(): void
+
+  extends?: Extends
 }
 
 export interface ComponentCustomOptions {}
@@ -148,6 +149,8 @@ function callHook(hook: Function, instance: ComponentInternalInstance) {
 }
 
 export function applyOptions(instance: ComponentInternalInstance) {
+  // resolveMergedOptions函数
+  // 1、合并mixins
   const options = resolveMergedOptions(instance)
   const publicThis = instance.proxy!
   const ctx = instance.ctx
@@ -157,7 +160,6 @@ export function applyOptions(instance: ComponentInternalInstance) {
     callHook(options.beforeCreate, instance)
   }
 
-  // resolveMergedOptions 为了类型不报错
   const {
     data: dataOptions,
     methods,
@@ -236,8 +238,43 @@ export function applyOptions(instance: ComponentInternalInstance) {
   registerLifecycleHook(onUnmounted, unmounted)
 }
 
+function mergeOptions(to: any, from: any) {
+  const { mixins } = from
+
+  // mixins是个数组要循环合并
+  if (mixins) {
+    mixins.forEach((m: ComponentOptionsMixin) => {
+      mergeOptions(to, m)
+    })
+  }
+
+  // 给目标对象赋值
+  for (const key in from) {
+    to[key] = from[key]
+  }
+}
+
 export function resolveMergedOptions(
   instance: ComponentInternalInstance
 ): MergedComponentOptions {
-  return instance.type as ComponentOptions
+  let resolved = {}
+  const base = instance.type as ComponentOptions
+
+  // mixins 就是组件的 mixins 选项
+  const { mixins } = base
+
+  // 全局的mixin选项
+  const { mixins: globalMixins } = instance.appContext
+
+  // 全局mixin 为空，实例上也没有mixins，就不用合并mixins了
+  if (!globalMixins.length && !mixins) {
+    // 直接赋值base
+    resolved = base as ComputedOptions
+  } else {
+    // todo globalMixins 未实现合并
+
+    // 合并component 的 mixins 选项
+    mergeOptions(resolved, base)
+  }
+  return resolved
 }
