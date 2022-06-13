@@ -98,6 +98,8 @@ interface LegacyOptions<
   updated?(): void
   beforeUnmount?(): void
   unmounted?(): void
+  beforeDestroy?(): void
+  destroyed?(): void
 
   extends?: Extends
 }
@@ -181,7 +183,9 @@ export function applyOptions(instance: ComponentInternalInstance) {
     beforeUpdate,
     updated,
     beforeUnmount,
-    unmounted
+    unmounted,
+    beforeDestroy,
+    destroyed
   } = options
 
   if (injectOptions) {
@@ -261,6 +265,14 @@ export function applyOptions(instance: ComponentInternalInstance) {
   registerLifecycleHook(onUpdated, updated)
   registerLifecycleHook(onBeforeUnmount, beforeUnmount)
   registerLifecycleHook(onUnmounted, unmounted)
+
+  // 兼容vue2.x 的beforeDestroy/destroyed 生命周期
+  if (beforeDestroy ) {
+    registerLifecycleHook(onBeforeUnmount, beforeDestroy)
+  }
+  if (destroyed) {
+    registerLifecycleHook(onUnmounted, destroyed)
+  }
 }
 
 function mergeOptions(to: any, from: any) {
