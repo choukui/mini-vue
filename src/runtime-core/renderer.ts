@@ -387,7 +387,7 @@ function baseCreateRenderer(
 
         // 创建 vnode,并保存在组件实例上
         const subTree = (instance.subTree = renderComponentRoot(instance))
-        patch(null, subTree, container)
+        patch(null, subTree, container, instance)
 
         // mounted
         if (m) {
