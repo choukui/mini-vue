@@ -1,8 +1,9 @@
-import { RootRenderFunction } from "./renderer";
-import { Component } from "./component";
-import { ComponentOptions } from "./componentOptions";
-import { VNode, createVNode } from "./vnode";
+import { RootRenderFunction } from "./renderer"
+import { Component } from "./component"
+import { ComponentOptions } from "./componentOptions"
+import { VNode, createVNode } from "./vnode"
 import { ComponentPublicInstance } from "./componentPublicInstance"
+import { InjectionKey } from "./apiInject"
 
 /****** TS类型声明 start ******/
 export interface App<HostElement = any> {
@@ -12,7 +13,8 @@ export interface App<HostElement = any> {
     isHydrate?: boolean,
     isSVG?: boolean
   ): ComponentPublicInstance
-  _context: AppContext
+  _context: AppContext,
+  provide<T>(key: InjectionKey<T> | string, value: T): this
 }
 
 export type CreateAppFunction<HostElement> = (
@@ -21,13 +23,15 @@ export type CreateAppFunction<HostElement> = (
 
 export interface AppContext {
   mixins: ComponentOptions[]
+  provides: Record<string | symbol, any>
 }
 /****** TS类型声明 end ******/
 
 // 创建app上下文，全局属性会挂载到appContext上
 export function createAppContext(): AppContext {
   return {
-    mixins: []
+    mixins: [],
+    provides: Object.create(null),
   }
 }
 
@@ -54,6 +58,12 @@ export function createAppAPI<HostElement>(render: RootRenderFunction): CreateApp
         vnode.appContext = context
         // 调用renderer文件baseCreateRenderer函数里的 render 函数。开始真正的patch
         render(vnode, rootContainer)
+      },
+
+      // app.provide()
+      provide(key, value){
+        context.provides[key as string] = value
+        return app
       }
     }
     return app

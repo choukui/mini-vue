@@ -5,4 +5,5 @@
 // import '../example/computed'
 // import '../example/lifeCycle'
 // import '../example/mixins'
-import '../example/mixin'
+// import '../example/mixin'
+import '../example/provide&inject'

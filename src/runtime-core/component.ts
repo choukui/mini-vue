@@ -63,6 +63,7 @@ export interface ComponentInternalInstance {
   uid: number
   type: ConcreteComponent
   render: InternalRenderFunction | null,
+  parent: ComponentInternalInstance | null
   vnode: VNode
   next: VNode | null
   subTree: VNode
@@ -74,6 +75,8 @@ export interface ComponentInternalInstance {
   ctx: Data
   proxy: ComponentPublicInstance | null,
   isMounted: boolean
+
+  provides: Data
 
   props: Data
   data: Data
@@ -115,12 +118,14 @@ export function createComponentInstance(vnode: VNode, parent: ComponentInternalI
     uid: uid++,
     type,
     vnode,
+    parent,
     appContext,
     render: null,
     subTree: null!,
     next: null,
     update: null!,
     proxy: null,
+    provides: parent ? parent.provides : Object.create(appContext.provides), // 继承了父级的provides
     setupState: EMPTY_OBJ, // 储存 setupResult，前提条件 setup 返回值必须是一个对象
     // state
     /*

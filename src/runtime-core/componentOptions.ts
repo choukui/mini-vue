@@ -3,8 +3,9 @@ import { ComponentInternalInstance, ComponentInternalOptions } from './component
 import { computed, ComputedGetter, WritableComputedOptions } from "../reactive/computed"
 import { EmitsOptions } from "./componentEmits"
 import { reactive } from "../reactive/reactive"
-import { isFunction, NOOP } from "../shared"
-import { onBeforeMount, onMount, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted } from "./apiLifecyle";
+import { isArray, isFunction, isObject, NOOP } from "../shared"
+import { onBeforeMount, onMount, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted } from "./apiLifecyle"
+import { provide, inject } from "./apiInject";
 
 /********** TS类型声明 start ***********/
 
@@ -16,6 +17,7 @@ export type ComputedOptions = Record<
 export interface MethodOptions {
   [key: string]: Function
 }
+
 export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
   any,
@@ -28,6 +30,13 @@ export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
   any
   >
+
+type ObjectInjectOptions = Record<
+  string | symbol,
+  string | symbol | { from?: string | symbol; default?: unknown }
+  >
+
+type ComponentInjectOptions = string[] | ObjectInjectOptions
 
 export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
 
@@ -165,6 +174,8 @@ export function applyOptions(instance: ComponentInternalInstance) {
     data: dataOptions,
     methods,
     computed: computedOptions,
+    provide: provideOptions,
+    inject: injectOptions,
     beforeMount,
     mounted,
     beforeUpdate,
@@ -172,6 +183,10 @@ export function applyOptions(instance: ComponentInternalInstance) {
     beforeUnmount,
     unmounted
   } = options
+
+  if (injectOptions) {
+    resolveInjections(injectOptions, ctx)
+  }
 
   if (dataOptions) {
     // 拿到data返回的对象
@@ -218,6 +233,15 @@ export function applyOptions(instance: ComponentInternalInstance) {
   }
 
   // todo watch 未实现
+
+  // option provide
+  if (provideOptions) {
+    const provides = isFunction(provideOptions)? provideOptions.call(publicThis) : provideOptions
+    const providesKeys = Reflect.ownKeys(provides) // key array
+    providesKeys.forEach(key => {
+      provide(key, provides[key])
+    })
+  }
 
   function registerLifecycleHook(register: Function, hook?: Function) {
     // 这里手动传入 instance, 源码里是 currentInstance
@@ -282,4 +306,32 @@ export function resolveMergedOptions(
     mergeOptions(resolved, base)
   }
   return resolved
+}
+
+function resolveInjections(injectOptions: ComponentInjectOptions, ctx: any) {
+  if (isArray(injectOptions)) {
+    injectOptions = normalizeInject(injectOptions)
+  }
+
+  for (const key in injectOptions) {
+    const opt = (injectOptions as ObjectInjectOptions)[key]
+    let injected:unknown
+    if (isObject(opt)) {
+
+    } else {
+      injected = inject(opt)
+    }
+    ctx[key] = injected
+  }
+}
+// inject 数组形式转化为对象形式
+function normalizeInject(raw: ComponentInjectOptions):ObjectInjectOptions {
+  if (isArray(raw)) {
+    const res: ObjectInjectOptions = {}
+    for (let i = 0; i < raw.length; i++) {
+      res[raw[i]] = raw[i]
+    }
+    return res
+  }
+  return raw
 }
