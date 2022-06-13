@@ -4,4 +4,5 @@
 // import '../example/methods'
 // import '../example/computed'
 // import '../example/lifeCycle'
-import '../example/mixins'
+// import '../example/mixins'
+import '../example/mixin'

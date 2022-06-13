@@ -150,7 +150,8 @@ function callHook(hook: Function, instance: ComponentInternalInstance) {
 
 export function applyOptions(instance: ComponentInternalInstance) {
   // resolveMergedOptions函数
-  // 1、合并mixins
+  // 1、合并组件mixins
+  // 2、全局mixin处理
   const options = resolveMergedOptions(instance)
   const publicThis = instance.proxy!
   const ctx = instance.ctx
@@ -271,9 +272,13 @@ export function resolveMergedOptions(
     // 直接赋值base
     resolved = base as ComputedOptions
   } else {
-    // todo globalMixins 未实现合并
-
-    // 合并component 的 mixins 选项
+    // 全局mixin选项合并
+    if (globalMixins.length) {
+      globalMixins.forEach((m) => {
+        mergeOptions(resolved, m)
+      })
+    }
+    // 合并component中的mixins选项
     mergeOptions(resolved, base)
   }
   return resolved

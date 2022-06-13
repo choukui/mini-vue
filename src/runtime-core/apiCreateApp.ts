@@ -49,6 +49,9 @@ export function createAppAPI<HostElement>(render: RootRenderFunction): CreateApp
       mount(rootContainer: HostElement): any {
         // 创建vnode
         const vnode = createVNode(rootComponent, rootProps) as VNode
+
+        // 根节点上下文context复制给appContext，被所有组件共享
+        vnode.appContext = context
         // 调用renderer文件baseCreateRenderer函数里的 render 函数。开始真正的patch
         render(vnode, rootContainer)
       }
