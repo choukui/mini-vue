@@ -6,4 +6,5 @@
 // import '../example/lifeCycle'
 // import '../example/mixins'
 // import '../example/mixin'
-import '../example/provide&inject'
+// import '../example/provide&inject'
+import '../example/watch'

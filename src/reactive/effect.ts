@@ -17,6 +17,24 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
+export type DebuggerEventExtraInfo = {
+  target: object
+  type: TrackOpTypes | TriggerOpTypes
+  key: any
+  newValue?: any
+  oldValue?: any
+  oldTarget?: Map<any, any> | Set<any>
+}
+
+export type DebuggerEvent = {
+  effect: ReactiveEffect
+} & DebuggerEventExtraInfo
+
+export interface DebuggerOptions {
+  onTrack?: (event: DebuggerEvent) => void
+  onTrigger?: (event: DebuggerEvent) => void
+}
+
 let shouldTrack = true
 const trackStack: boolean[] = []
 
@@ -154,7 +172,7 @@ export function triggerEffect(dep: Dep | ReactiveEffect[]) {
 }
 
 export class ReactiveEffect<T = any> {
-  constructor(public fn:() => T, public scheduler: EffectScheduler| null = null) {}
+  constructor(public fn:() => T, public scheduler: EffectScheduler | null = null) {}
   deps: Dep[] = []
   run() {
     // 设置activeReact为当前实例，这样就可以被别的属性收集为依赖了

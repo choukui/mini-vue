@@ -50,6 +50,7 @@ export type ToRefs<T = any> = {
 
 export interface Ref<T = any> {
   value: T
+  _shallow?: boolean
 }
 
 export type CustomRefFactory<T> = (
@@ -158,7 +159,6 @@ class RefImpl<T> {
   * shallow true 浅渲染， false 深渲染
   *  */
   constructor(value: T, public readonly _shallow = false) {
-    // TODO 浅渲染逻辑未实现
     this._rawValue = this._shallow ? value : toRaw(value)
     // cover函数 如果是个对象调用reactive方法，不是的话。返回原值
     // 浅渲染直接返回原始值不做reactive转换
