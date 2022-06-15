@@ -176,9 +176,14 @@ export function triggerEffect(dep: Dep | ReactiveEffect[]) {
 }
 
 export class ReactiveEffect<T = any> {
+  active = true // flag 是否活跃Effect
+  onStop?: () => void
   constructor(public fn:() => T, public scheduler: EffectScheduler | null = null) {}
   deps: Dep[] = []
   run() {
+    if (!this.active) { // stop
+      return this.fn()
+    }
     // 设置activeReact为当前实例，这样就可以被别的属性收集为依赖了
     if (!effectStack.includes(this)) {
       try {
@@ -200,5 +205,25 @@ export class ReactiveEffect<T = any> {
     }
 
   }
+
+  stop() {
+    if (this.active) {
+      cleanupEffect(this) // 清除所有监听
+      if (this.onStop) {
+        this.onStop()
+      }
+      this.active = false
+    }
+  }
 }
 
+// 清除监听器
+function cleanupEffect(effect: ReactiveEffect) {
+  const { deps } = effect
+  if (deps.length) {
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].delete(effect)
+    }
+    deps.length = 0
+  }
+}
