@@ -1,7 +1,7 @@
 import { Dep, createDep } from "./dep";
 import { isArray } from "../shared";
 import {TrackOpTypes, TriggerOpTypes} from "./operations";
-// import { isIntegerKey } from "../shared";
+import { isIntegerKey } from "../shared";
 
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
@@ -87,16 +87,20 @@ export function track(target: object, type:TrackOpTypes, key: unknown) {
   }
   let dep = depsMap.get(key)
   if (!dep) {
-    depsMap.set(key, ( dep = createDep() ))
+    depsMap.set(key, ( dep = createDep() /* 初始化 dep */ ))
   }
-  /* 初始化 dep start */
 
   // 开始收集依赖
   trackEffects(dep)
 }
 
-export function trigger(target: object, type: TriggerOpTypes, key: unknown, newValue?: unknown) {
-
+export function trigger(
+  target: object,
+  type: TriggerOpTypes,
+  key: unknown,
+  newValue?: unknown,
+  oldValue?: unknown
+) {
   // 从集合中拿不到deps 就不用派发更新了
   const depsMap = targetMap.get(target)
   if (!depsMap) {
@@ -110,23 +114,23 @@ export function trigger(target: object, type: TriggerOpTypes, key: unknown, newV
   //     }
   //   })
   // } else {
-    // if (key !== void 0) {
+    if (key !== void 0) {
       deps.push(depsMap.get(key))
-    // }
-
-
-    // switch (type) {
-    //   case TriggerOpTypes.ADD:
-    //     if (isIntegerKey(key)) {
-    //       // new index added to array -> length changes
-    //       deps.push(depsMap.get('length'))
-    //     }
-    //     break
+    }
+  // }
+    switch (type) {
+      case TriggerOpTypes.ADD:
+        if (isIntegerKey(key)) {
+          // 向数组push新值时，length更新了
+          // 那只要调用 length 的dep就能行
+          deps.push(depsMap.get('length'))
+        }
+        break
     //   case TriggerOpTypes.DELETE:
     //     break
     //   case TriggerOpTypes.SET:
     //     break
-    // }
+    }
   // }
 
 

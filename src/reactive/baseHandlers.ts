@@ -6,10 +6,10 @@ import {
   reactiveMap,
   shallowReadonlyMap,
   readonlyMap,
-  shallowReactiveMap, readonly
+  shallowReactiveMap, readonly, isReadonly
 } from "./reactive";
 import { track, trigger, pauseTracking, resetTracking } from "./effect";
-import { isArray, isObject, isIntegerKey, hasOwn, isSymbol, makeMap, extend } from "../shared";
+import {isArray, isObject, isIntegerKey, hasOwn, isSymbol, makeMap, extend, hasChange} from "../shared";
 import { isRef } from "./ref";
 import { TriggerOpTypes, TrackOpTypes } from "./operations";
 
@@ -66,9 +66,9 @@ function createGetter(isReadonly = false, shallow = false) {
     * 处理像这种情况的访问 target['__v_isReactive']
     * 当判断是不是一个reactive是有用，例如 isReactive() 函数
     * */
-    if (key === ReactiveFlags.IS_REACTIVE) { // '__v_isReactive'
+    if (key === ReactiveFlags.IS_REACTIVE) { // 访问 '__v_isReactive' 属性
       return !isReadonly
-    } else if (key === ReactiveFlags.IS_READONLY) { // '__v_isReadonly'
+    } else if (key === ReactiveFlags.IS_READONLY) { // 访问 '__v_isReadonly' 属性
       return isReadonly
     } else if (
       // 如果是读取原数据，并且缓存中有。直接返回目标对象 toRaw() 会读取__v_raw
@@ -84,7 +84,6 @@ function createGetter(isReadonly = false, shallow = false) {
 
     // 判断target是不是数组
     const targetIsArray = isArray(target)
-    // debugger
     if (!isReadonly && targetIsArray && hasOwn(arrayInstrumentations, key)) {
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
@@ -147,7 +146,7 @@ function createGetter(isReadonly = false, shallow = false) {
 
 function createSetter(shallow = false) {
   return function set (target: Target, key: string | symbol, value: any, receiver: any):boolean {
-
+    let oldValue = (target as any)[key]
     /*
     * 处理 reactive 嵌套 ref 时的赋值时不响应的情况
     * eg:
@@ -159,10 +158,11 @@ function createSetter(shallow = false) {
     *   }
     * })
     */
-    if (!shallow) {
-      let oldValue = (target as any)[key]
-      value = toRaw(value)
-      oldValue = toRaw(oldValue)
+    if (!shallow && !isReadonly(value)) {
+      if (!shallow) {
+        value = toRaw(value)
+        oldValue = toRaw(oldValue)
+      }
       if (!isArray(target) && !isRef(value) && isRef(oldValue)) {
         oldValue.value = value
         return true
@@ -170,9 +170,19 @@ function createSetter(shallow = false) {
     }
     /* end */
 
+    // 判断数组的key是否小于length或者key是否存在target上，根据不同的情况来派发更新
+    const hadKey = isArray(target) && isIntegerKey(key) ? Number(key) < target.length : hasOwn(target, key)
+
     const res = Reflect.set(target, key, value, receiver)
+
     // 派发更新
-    trigger(target, TriggerOpTypes.ADD, key, value)
+    if (!hadKey) {
+      // 派发更新 新增
+      trigger(target, TriggerOpTypes.ADD, key, value)
+    } else if (hasChange(value, oldValue)) {
+      // 派发更新 设置
+      trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+    }
     return res
   }
 }
