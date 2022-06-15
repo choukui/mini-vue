@@ -45,6 +45,11 @@ type MapSources<T, Immediate> = {
 type MultiWatchSources = (WatchSource<unknown> | object)[]
 /********** TS类型声明 end ***********/
 
+// watchEffect 实现，和watch的区别是：没有callback函数
+export function watchEffect(effect: WatchEffect, options?: WatchOptionsBase) {
+  doWatch(effect, null, options)
+}
+
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
@@ -119,11 +124,14 @@ function doWatch(
       }
     })
   } else if (isFunction(source)) { // function
-    if (cb) {
+    if (cb) { // watch函数
       // @ts-ignore
       getter = () => source()
-    } else {
-      getter = NOOP
+    } else { // 没有callback就是一个watchEffect
+      getter = () => {
+        // @ts-ignore
+        return source()
+      }
     }
   } else {
     getter = NOOP
@@ -133,7 +141,7 @@ function doWatch(
 
   let oldValue = isMultiSource ? [] : {}
   const job: SchedulerJob = () => {
-    if (cb) {
+    if (cb) { // watch(source, callback)
       const newValue = effect.run()
       // 自己提出一个函数，源码里太长了不好阅读，功能一样
       const _hasChange = () => {
@@ -147,6 +155,8 @@ function doWatch(
 
         oldValue = newValue
       }
+    } else { // watchEffect
+      effect.run()
     }
   }
 
@@ -167,6 +177,8 @@ function doWatch(
   if (cb) {
     // 先主动获取下，拿到旧值
     oldValue = effect.run()
+  } else { // watchEffect
+    effect.run()
   }
   return function () {
     //  effect stop

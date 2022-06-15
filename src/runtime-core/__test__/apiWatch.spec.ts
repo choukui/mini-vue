@@ -1,6 +1,6 @@
 import {
   watch,
-  // watchEffect,
+  watchEffect,
   // reactive,
   // computed,
   // nextTick,
@@ -38,7 +38,7 @@ import { ref } from "../../reactive";
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
 describe('api: watch', () => {
-  /*it('effect', async () => {
+  it('effect', async () => {
     const state = reactive({ count: 0 })
     let dummy
     watchEffect(() => {
@@ -49,7 +49,7 @@ describe('api: watch', () => {
     state.count++
     await nextTick()
     expect(dummy).toBe(1)
-  })*/
+  })
 
   it('watching single source: getter', async () => {
     const state = reactive({ count: 0 })
