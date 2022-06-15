@@ -171,6 +171,8 @@ function createSetter(shallow = false) {
     /* end */
 
     // 判断数组的key是否小于length或者key是否存在target上，根据不同的情况来派发更新
+    // 哈哈，这行一定要在Reflect.set前获取。不然拿到的值是最新的。Number(key) < target.length 就不正确了。
+    // 这个bug让我找了一天。fuck!!!
     const hadKey = isArray(target) && isIntegerKey(key) ? Number(key) < target.length : hasOwn(target, key)
 
     const res = Reflect.set(target, key, value, receiver)
