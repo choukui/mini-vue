@@ -10,6 +10,7 @@ import {
   // ComponentInternalInstance,
   // ComponentPublicInstance
 } from '../apiWatch'
+import { computed } from "../../reactive/computed";
 import { nextTick } from "../scheduler";
 import { reactive } from "../../reactive/reactive";
 import { ref } from "../../reactive";
@@ -50,7 +51,7 @@ describe('api: watch', () => {
     expect(dummy).toBe(1)
   })*/
 
-  /*it('watching single source: getter', async () => {
+  it('watching single source: getter', async () => {
     const state = reactive({ count: 0 })
     let dummy
     watch(
@@ -67,7 +68,7 @@ describe('api: watch', () => {
     state.count++
     await nextTick()
     expect(dummy).toMatchObject([1, 0])
-  })*/
+  })
 
   it('watching single source: ref', async () => {
     const count = ref(0)
@@ -85,7 +86,7 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([1, 0])
   })
 
-  /*it('watching single source: array', async () => {
+  it('watching single source: array', async () => {
     const array = reactive([] as number[])
     const spy = jest.fn()
     watch(array, spy)
@@ -93,9 +94,9 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy).toBeCalledTimes(1)
     expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
-  })*/
+  })
 
-  /*it('should not fire if watched getter result did not change', async () => {
+  it('should not fire if watched getter result did not change', async () => {
     const spy = jest.fn()
     const n = ref(0)
     watch(() => n.value % 2, spy)
@@ -108,9 +109,9 @@ describe('api: watch', () => {
     await nextTick()
     // should not be called again because getter result did not change
     expect(spy).toBeCalledTimes(1)
-  })*/
+  })
 
-  /*it('watching single source: computed ref', async () => {
+  it('watching single source: computed ref', async () => {
     const count = ref(0)
     const plus = computed(() => count.value + 1)
     let dummy
@@ -125,9 +126,9 @@ describe('api: watch', () => {
     count.value++
     await nextTick()
     expect(dummy).toMatchObject([2, 1])
-  })*/
+  })
 
-  /*it('watching primitive with deep: true', async () => {
+  it('watching primitive with deep: true', async () => {
     const count = ref(0)
     let dummy
     watch(
@@ -179,7 +180,7 @@ describe('api: watch', () => {
     ])
   })
 
-  it('watching multiple sources: readonly array', async () => {
+  /* it('watching multiple sources: readonly array', async () => {
     const state = reactive({ count: 1 })
     const status = ref(false)
 

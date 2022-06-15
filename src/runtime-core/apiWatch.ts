@@ -95,7 +95,8 @@ function doWatch(
 ): WatchStopHandle {
 
   let getter: () => any
-  // let forceTrigger = false
+  let forceTrigger = false // flag 强制触发
+  let isMultiSource = false // flag, source = [ value, value2 ]这种情况
   if (isRef(source)) { // ref
     getter = () => source.value
     // let forceTrigger = !!source._shallow
@@ -103,7 +104,19 @@ function doWatch(
     getter = () => source
     deep = true
   } else if (isArray(source)) { // array
-    getter = NOOP
+    isMultiSource = true
+    // 数组里有一个值是reactive的。就强制触发更新
+    forceTrigger = source.some(s => isReactive(s))
+    getter = () => source.map(s => {
+      // 根据不同的情况返回不同的值
+      if (isRef(s)) {
+        return s.value
+      } else if (isReactive(s)) {
+        return traverse(s)
+      } else if (isFunction(s)) {
+        return s()
+      }
+    })
   } else if (isFunction(source)) { // function
     if (cb) {
       // @ts-ignore
@@ -117,12 +130,18 @@ function doWatch(
 
   const onInvalidate = () => {}
 
-  let oldValue = {}
-  const job: SchedulerJob = () =>{
+  let oldValue = isMultiSource ? [] : {}
+  const job: SchedulerJob = () => {
     if (cb) {
       const newValue = effect.run()
+      // 自己提出一个函数，源码里太长了不好阅读，功能一样
+      const _hasChange = () => {
+        return isMultiSource
+          ? newValue.some((v: any, i: number) => hasChange(v, (oldValue as any[])[i]))
+          : hasChange(newValue, oldValue)
+      }
       // 新旧值有变化才触发回调
-      if (deep || hasChange(newValue, oldValue)) {
+      if (deep || forceTrigger || _hasChange()) {
         cb(newValue, oldValue, onInvalidate)
 
         oldValue = newValue
@@ -136,7 +155,7 @@ function doWatch(
   }
 
   let scheduler: EffectScheduler = () => {
-    job()
+    Promise.resolve()
   }
   const effect = new ReactiveEffect(getter, scheduler)
 
