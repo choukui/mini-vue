@@ -282,7 +282,7 @@ describe('api: watch', () => {
     expect(cleanup).toHaveBeenCalledTimes(2)
   })
 
-  /* it('cleanup registration (with source)', async () => {
+  it('cleanup registration (with source)', async () => {
     const count = ref(0)
     const cleanup = jest.fn()
     let dummy
@@ -305,7 +305,7 @@ describe('api: watch', () => {
     expect(cleanup).toHaveBeenCalledTimes(2)
   })
 
-  it('flush timing: pre (default)', async () => {
+  /* it('flush timing: pre (default)', async () => {
     const count = ref(0)
     const count2 = ref(0)
 
