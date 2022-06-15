@@ -8,7 +8,7 @@ export interface SchedulerJob extends Function {
   ownerInstance?: ComponentInternalInstance
 }
 /********** TS类型声明 end ***********/
-const resolvedPromise: Promise<any> = Promise.resolve()
+export const resolvedPromise: Promise<any> = Promise.resolve()
 let currentFlushPromise: Promise<void> | null = null
 export function nextTick<T = void>(
   this: T,

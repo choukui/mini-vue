@@ -4,6 +4,7 @@ import { EMPTY_OBJ, hasChange, isArray, isFunction, NOOP, isObject, isPlainObjec
 import { DebuggerOptions, EffectScheduler, ReactiveEffect } from "../reactive/effect"
 import { SchedulerJob } from "./scheduler"
 import { isReactive, ReactiveFlags } from "../reactive/reactive"
+import { resolvedPromise } from "./scheduler";
 import { currentInstance } from "./component"
 
 /********** TS类型声明 start ***********/
@@ -155,7 +156,11 @@ function doWatch(
   }
 
   let scheduler: EffectScheduler = () => {
-    Promise.resolve()
+    // 源码里是放在队列里执行的，这里简单放在微任务里。
+    // 目的防止同一个宏任务连续修改监听源，多次触发回调函数执行
+    resolvedPromise.then(() => {
+      job()
+    })
   }
   const effect = new ReactiveEffect(getter, scheduler)
 
