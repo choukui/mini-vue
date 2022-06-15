@@ -227,7 +227,7 @@ describe('api: watch', () => {
     // expect(`Invalid watch source`).toHaveBeenWarned()
   })
 
-  /* it('stopping the watcher (effect)', async () => {
+  it('stopping the watcher (effect)', async () => {
     const state = reactive({ count: 0 })
     let dummy
     const stop = watchEffect(() => {
@@ -282,7 +282,7 @@ describe('api: watch', () => {
     expect(cleanup).toHaveBeenCalledTimes(2)
   })
 
-  it('cleanup registration (with source)', async () => {
+  /* it('cleanup registration (with source)', async () => {
     const count = ref(0)
     const cleanup = jest.fn()
     let dummy

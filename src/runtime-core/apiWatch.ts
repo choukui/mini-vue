@@ -46,8 +46,8 @@ type MultiWatchSources = (WatchSource<unknown> | object)[]
 /********** TS类型声明 end ***********/
 
 // watchEffect 实现，和watch的区别是：没有callback函数
-export function watchEffect(effect: WatchEffect, options?: WatchOptionsBase) {
-  doWatch(effect, null, options)
+export function watchEffect(effect: WatchEffect, options?: WatchOptionsBase): WatchStopHandle {
+  return doWatch(effect, null, options)
 }
 
 // overload: single source + cb
@@ -125,22 +125,38 @@ function doWatch(
     })
   } else if (isFunction(source)) { // function
     if (cb) { // watch函数
-      // @ts-ignore
-      getter = () => source()
+      getter = () => source(onInvalidate)
     } else { // 没有callback就是一个watchEffect
       getter = () => {
-        // @ts-ignore
-        return source()
+        if (cleanup) {
+          cleanup()
+        }
+        return source(onInvalidate)
       }
     }
   } else {
     getter = NOOP
   }
 
-  const onInvalidate = () => {}
+  if (cb && deep) {
+    const baseGetter = getter
+    getter = () => traverse(baseGetter())
+  }
+
+  // 侦听器被停止时
+  // 清除副作用 watchEffect(fn, (onInvalidate) => { onInvalidate(cleanup)})
+  let cleanup: () => void
+  const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
+    cleanup = effect.onStop = () => {
+      fn()
+    }
+  }
 
   let oldValue = isMultiSource ? [] : {}
   const job: SchedulerJob = () => {
+    if (!effect.active) { // effect stop 不用执行
+      return
+    }
     if (cb) { // watch(source, callback)
       const newValue = effect.run()
       // 自己提出一个函数，源码里太长了不好阅读，功能一样
@@ -151,18 +167,16 @@ function doWatch(
       }
       // 新旧值有变化才触发回调
       if (deep || forceTrigger || _hasChange()) {
+        //在运行之前 先清除一下副作用
+        if (cleanup) {
+          cleanup()
+        }
         cb(newValue, oldValue, onInvalidate)
-
         oldValue = newValue
       }
     } else { // watchEffect
       effect.run()
     }
-  }
-
-  if (cb && deep) {
-    const baseGetter = getter
-    getter = () => traverse(baseGetter())
   }
 
   let scheduler: EffectScheduler = () => {
@@ -172,6 +186,7 @@ function doWatch(
       job()
     })
   }
+
   const effect = new ReactiveEffect(getter, scheduler)
 
   if (cb) {
@@ -182,6 +197,7 @@ function doWatch(
   }
   return function () {
     //  effect stop
+    effect.stop()
   }
 }
 
