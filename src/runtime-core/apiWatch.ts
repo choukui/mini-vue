@@ -109,7 +109,7 @@ function doWatch(
   } else if (isReactive(source)) { // reactive
     getter = () => source
     deep = true
-  } else if (isArray(source)) { // array
+  } else if (isArray(source)) { // array 多数据源的侦听
     isMultiSource = true
     // 数组里有一个值是reactive的。就强制触发更新
     forceTrigger = source.some(s => isReactive(s))
@@ -118,6 +118,7 @@ function doWatch(
       if (isRef(s)) {
         return s.value
       } else if (isReactive(s)) {
+        // 递归返回值
         return traverse(s)
       } else if (isFunction(s)) {
         return s()
@@ -138,15 +139,19 @@ function doWatch(
     getter = NOOP
   }
 
+  // 深度侦听 deep
   if (cb && deep) {
     const baseGetter = getter
+    // 递归遍历getter函数的返回值
     getter = () => traverse(baseGetter())
   }
 
   // 侦听器被停止时
   // 清除副作用 watchEffect(fn, (onInvalidate) => { onInvalidate(cleanup)})
   let cleanup: () => void
+  // 定义失效时需要传参的函数
   const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
+    // 执行用户传进来的fn函数
     cleanup = effect.onStop = () => {
       fn()
     }
@@ -171,14 +176,16 @@ function doWatch(
         if (cleanup) {
           cleanup()
         }
+        // 给回调函数传入新旧两个值，
         cb(newValue, oldValue, onInvalidate)
         oldValue = newValue
       }
-    } else { // watchEffect
+    } else { // watchEffect(effect) 直接run
       effect.run()
     }
   }
 
+  // 调度器 pre
   let scheduler: EffectScheduler = () => {
     // 源码里是放在队列里执行的，这里简单放在微任务里。
     // 目的防止同一个宏任务多个状态改变，多次触发回调函数执行
@@ -187,6 +194,7 @@ function doWatch(
     })
   }
 
+  // effect.run方法执行，就是执行getter
   const effect = new ReactiveEffect(getter, scheduler)
 
   if (cb) {
@@ -199,6 +207,7 @@ function doWatch(
   } else { // watchEffect
     effect.run()
   }
+  // 返回一个函数，用于停止侦听
   return function () {
     //  effect stop
     effect.stop()
@@ -207,6 +216,7 @@ function doWatch(
 
 // 这块直接从源码复制过来的，没看懂这块的作用,
 // todo 待深入研究这块的作用
+// seen 是用于防止递归陷入死循环
 export function traverse(value: unknown, seen?: Set<unknown>) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
