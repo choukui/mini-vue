@@ -181,7 +181,7 @@ function doWatch(
 
   let scheduler: EffectScheduler = () => {
     // 源码里是放在队列里执行的，这里简单放在微任务里。
-    // 目的防止同一个宏任务连续修改监听源，多次触发回调函数执行
+    // 目的防止同一个宏任务多个状态改变，多次触发回调函数执行
     resolvedPromise.then(() => {
       job()
     })
