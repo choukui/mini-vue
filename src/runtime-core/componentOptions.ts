@@ -1,11 +1,12 @@
-import { CreateComponentPublicInstance } from "./componentPublicInstance"
-import { ComponentInternalInstance, ComponentInternalOptions } from './component'
+import {ComponentPublicInstance, CreateComponentPublicInstance} from "./componentPublicInstance"
+import {ComponentInternalInstance, ComponentInternalOptions, Data} from './component'
 import { computed, ComputedGetter, WritableComputedOptions } from "../reactive/computed"
 import { EmitsOptions } from "./componentEmits"
 import { reactive } from "../reactive/reactive"
-import { isArray, isFunction, isObject, NOOP } from "../shared"
+import {isArray, isFunction, isObject, isString, NOOP} from "../shared"
 import { onBeforeMount, onMount, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted } from "./apiLifecyle"
 import { provide, inject } from "./apiInject";
+import {watch, WatchCallback, WatchOptions} from "./apiWatch";
 
 /********** TS类型声明 start ***********/
 
@@ -150,6 +151,14 @@ export type MergedComponentOptionsOverride = {
   errorCaptured?: MergedHook
 }
 
+export type ObjectWatchOptionItem = {
+  handler: WatchCallback | string
+} & WatchOptions
+
+type WatchOptionItem = string | WatchCallback | ObjectWatchOptionItem
+
+type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
+
 /********** TS类型声明 end ***********/
 
 // 调用hook并改变this指向
@@ -178,6 +187,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
     computed: computedOptions,
     provide: provideOptions,
     inject: injectOptions,
+    watch: watchOptions,
     beforeMount,
     mounted,
     beforeUpdate,
@@ -236,7 +246,12 @@ export function applyOptions(instance: ComponentInternalInstance) {
     }
   }
 
-  // todo watch 未实现
+  // option watch
+  if (watchOptions) {
+    for (const key in watchOptions) {
+      createWatcher(watchOptions[key], ctx, publicThis, key)
+    }
+  }
 
   // option provide
   if (provideOptions) {
@@ -275,6 +290,32 @@ export function applyOptions(instance: ComponentInternalInstance) {
   }
 }
 
+// 处理不同的入参情况，最后调用的是watch函数
+function createWatcher(
+  raw: ComponentWatchOptionItem,
+  ctx: Data,
+  publicThis: ComponentPublicInstance,
+  key: string
+  ) {
+  const getter = () => (publicThis as any)[key]
+  if (isString(raw)) { // eg: watch: { count: 'handler' }
+    const handler = ctx[raw]
+    if (isFunction(handler)) {
+      watch(getter, handler as WatchCallback)
+    }
+  } else if (isFunction(raw)) { // eg: watch: { count: () => { ... } }
+    watch(getter, raw.bind(publicThis))
+  } else if (isObject(raw)) { // eg: watch: { count: { ... }, count: [] }
+    if (isArray(raw)) { // eg: watch: { count: [] }
+      raw.forEach(r => createWatcher(r, ctx,publicThis, key))
+    } else { // eg: watch: { count: { .... } }
+      const handler = isFunction(raw.handler) ? raw.handler.bind(publicThis) : (ctx[raw.handler] as WatchCallback)
+      if (isFunction(handler)) {
+        watch(getter, handler, raw)
+      }
+    }
+  }
+}
 function mergeOptions(to: any, from: any) {
   const { mixins } = from
 

@@ -692,7 +692,7 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalledTimes(2)
   })
 
-  /* it('immediate: triggers when initial value is null', async () => {
+  it('immediate: triggers when initial value is null', async () => {
     const state = ref(null)
     const spy = jest.fn()
     watch(() => state.value, spy, { immediate: true })
@@ -728,7 +728,7 @@ describe('api: watch', () => {
       { immediate: false }
     )
     expect(dummy).toBe(0)
-    expect(`"immediate" option is only respected`).toHaveBeenWarned()
+    // expect(`"immediate" option is only respected`).toHaveBeenWarned()
 
     count.value++
     await nextTick()
@@ -750,10 +750,10 @@ describe('api: watch', () => {
     ;(arr.value[1] as Array<number>)[0] = 3
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
-    expect(`"deep" option is only respected`).toHaveBeenWarned()
+    // expect(`"deep" option is only respected`).toHaveBeenWarned()
   })
 
-  it('onTrack', async () => {
+  /*it('onTrack', async () => {
     const events: DebuggerEvent[] = []
     let dummy
     const onTrack = jest.fn((e: DebuggerEvent) => {
