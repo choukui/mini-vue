@@ -190,8 +190,12 @@ function doWatch(
   const effect = new ReactiveEffect(getter, scheduler)
 
   if (cb) {
-    // 先主动获取下，拿到旧值
-    oldValue = effect.run()
+    if (immediate) { // immediate 立即执行
+      job()
+    } else {
+      // 先主动获取下，拿到旧值
+      oldValue = effect.run()
+    }
   } else { // watchEffect
     effect.run()
   }
