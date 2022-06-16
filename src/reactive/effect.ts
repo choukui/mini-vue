@@ -38,13 +38,20 @@ export interface DebuggerOptions {
 let shouldTrack = true
 const trackStack: boolean[] = []
 
-// 暂停收集
+/*
+* 暂停收集
+* 将上一次的的shouldTrack状态push到 trackStack
+* shouldTrack = false 暂停track收集
+* */
 export function pauseTracking() {
   trackStack.push(shouldTrack)
   shouldTrack = false
 }
 
-// 重置为上一次的状态
+/*
+* 恢复track
+* 重置为上一次的状态
+* */
 export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
@@ -76,6 +83,7 @@ export function effect<T>(fn: () => T): ReactiveEffectRunner {// fn 会立即执
   return runner
 }
 
+// track 负责进行依赖收集
 export function track(target: object, type:TrackOpTypes, key: unknown) {
   if (!isTracking()) {
     return
@@ -85,6 +93,8 @@ export function track(target: object, type:TrackOpTypes, key: unknown) {
   if (!depsMap) {
     targetMap.set(target, (depsMap = new Map()))
   }
+  // 获取下dep, 如果没有就创建一个新的
+  // dep = new Set()
   let dep = depsMap.get(key)
   if (!dep) {
     depsMap.set(key, ( dep = createDep() /* 初始化 dep */ ))
@@ -94,6 +104,7 @@ export function track(target: object, type:TrackOpTypes, key: unknown) {
   trackEffects(dep)
 }
 
+// trigger 负责进行派发更新
 export function trigger(
   target: object,
   type: TriggerOpTypes,
@@ -101,11 +112,13 @@ export function trigger(
   newValue?: unknown,
   oldValue?: unknown
 ) {
-  // 从集合中拿不到deps 就不用派发更新了
+  // 1、尝试从weakMap中获取target 对应的 depsMap
   const depsMap = targetMap.get(target)
   if (!depsMap) {
     return
   }
+
+
   const deps: (Dep | undefined)[] = []
   // if (key === 'length' && isArray(target)) {
   //   depsMap.forEach((dep, key) => {
@@ -155,6 +168,7 @@ export function trigger(
 *  */
 export function trackEffects(dep: Dep) {
   if (shouldTrack) {
+    // 添加当前activeEffect到dep
     dep.add(activeEffect!)
   }
 }

@@ -6,10 +6,12 @@ import {
   reactiveMap,
   shallowReadonlyMap,
   readonlyMap,
-  shallowReactiveMap, readonly, isReadonly
+  shallowReactiveMap,
+  readonly,
+  isReadonly
 } from "./reactive";
 import { track, trigger, pauseTracking, resetTracking } from "./effect";
-import {isArray, isObject, isIntegerKey, hasOwn, isSymbol, makeMap, extend, hasChange} from "../shared";
+import { isArray, isObject, isIntegerKey, hasOwn, isSymbol, makeMap, extend, hasChange } from "../shared";
 import { isRef } from "./ref";
 import { TriggerOpTypes, TrackOpTypes } from "./operations";
 
@@ -23,7 +25,8 @@ const builtInSymbols = new Set(
 )
 // 数组array
 const arrayInstrumentations = createArrayInstrumentations()
-// 对数组的操作进行了拦截
+
+// 对数组的原型上的方法进行了拦截
 function createArrayInstrumentations() {
   const instrumentations: Record<string, Function> = {}
   ;(['indexOf', 'includes', 'lastIndexOf']).forEach(key => {
@@ -42,10 +45,10 @@ function createArrayInstrumentations() {
   })
   ;(['push']).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      // 暂停收集
+      // 暂停track 暂停后，不会进行track
       pauseTracking()
       const res = (toRaw(this) as any)[key].apply(this, args)
-      // 恢复收集
+      // 恢复track 重新开始收集依赖
       resetTracking()
       return res
     }
@@ -105,6 +108,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
+    // isReadonly为true, 不进行track操作
     if (!isReadonly) {
       track(target, TrackOpTypes.GET, key)
     }
@@ -136,6 +140,8 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (isObject(res)) {
+      // 如果为对象类型，则进行深层次的递归
+      // ** proxy只能代理第一层对象，深层次嵌套对象要递归代理
       return isReadonly ? readonly(res) : reactive(res)
     }
 
@@ -167,6 +173,8 @@ function createSetter(shallow = false) {
         oldValue.value = value
         return true
       }
+    } else {
+      // shallow为true，无论是否对象响应式，都按照原样处理
     }
     /* end */
 
@@ -181,7 +189,7 @@ function createSetter(shallow = false) {
     if (!hadKey) {
       // 派发更新 新增
       trigger(target, TriggerOpTypes.ADD, key, value)
-    } else if (hasChange(value, oldValue)) {
+    } else if (hasChange(value, oldValue)) { // 判断value、oldValue有没有变化
       // 派发更新 设置
       trigger(target, TriggerOpTypes.SET, key, value, oldValue)
     }

@@ -277,11 +277,12 @@ function baseCreateRenderer(
   ) => {
     c1 = c1 || EMPTY_ARR
     c2 = c2 || EMPTY_ARR
+    // 获得新旧节点的长度
     const oldLength = c1.length
     const newLength = c2.length
-    // 找到两个数组length最小的
+    // 找到两个数组length最小的，作为公共长度
     const commonLength = Math.min(oldLength, newLength)
-    // 循环最小的
+    // 循环patch公共部分
     for (let i = 0; i < commonLength; i++) {
       const nextChild = c2[i]
       patch(c1[i], nextChild as VNode, container, parentComponent)

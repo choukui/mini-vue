@@ -73,17 +73,17 @@ export function unref<T>(ref:T | Ref<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
-// 浅渲染
+// 浅渲染, 创建一个跟踪自身 .value 变化的 ref，但不会使其值也变成响应式的。
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
-// toRef
+// toRef 可以用来为源响应式对象上的某个 property 新创建一个 ref。然后，ref 可以被传递，它会保持对其源 property 的响应式连接。
 export function toRef<T extends object, K extends keyof T>(object: T, key: K): ToRef<T[K]> {
   return isRef(object[key]) ? object[key] : (new ObjectRefImpl(object, key) as any)
 }
 
-// toRefs
+// toRefs 将响应式对象转换为普通对象，其中结果对象的每个 property 都是指向原始对象相应 property 的 ref
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   const res: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
@@ -91,7 +91,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   }
   return res
 }
-
+//customRef 创建一个自定义的 ref，并对其依赖项跟踪和更新触发进行显式控制
 export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
   return new CustomRefImpl(factory) as any
 }
