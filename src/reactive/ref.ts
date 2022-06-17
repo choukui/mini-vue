@@ -176,7 +176,7 @@ class RefImpl<T> {
     newValue = this._shallow ? newValue : toRaw(newValue)
     // 值不同，再触发更新，新旧值相同不会触发更新
     if (hasChange(newValue, this._rawValue)) {
-      // 必须先赋值再出发依赖，否则拿到的是旧值
+      // 必须先赋值再触发依赖更新，否则拿到的是旧值
       this._value = this._shallow ? newValue : cover(newValue);
       this._rawValue = newValue;
       // 派发依赖更新

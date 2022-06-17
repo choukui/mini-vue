@@ -4,7 +4,7 @@ import { computed, ComputedGetter, WritableComputedOptions } from "../reactive/c
 import { EmitsOptions } from "./componentEmits"
 import { reactive } from "../reactive/reactive"
 import {isArray, isFunction, isObject, isString, NOOP} from "../shared"
-import { onBeforeMount, onMount, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted } from "./apiLifecyle"
+import { onBeforeMount, onMount, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted } from "./apiLifecycle"
 import { provide, inject } from "./apiInject";
 import {watch, WatchCallback, WatchOptions} from "./apiWatch";
 

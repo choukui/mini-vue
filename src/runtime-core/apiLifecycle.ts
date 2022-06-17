@@ -7,9 +7,10 @@ export function injectHook(
   target: ComponentInternalInstance | null
 ): Function | undefined {
   if (target) {
-
+    // 获取target类型上的函数钩子，可以是多个，多个就是一个数组
     const hooks = target[type] || (target[type] = [])
     const wrappedHook = (...args: unknown[]) => {
+      // 执行钩子
       hook(args)
     }
     hooks.push(wrappedHook)
