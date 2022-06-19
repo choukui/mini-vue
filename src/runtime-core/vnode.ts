@@ -16,6 +16,7 @@ export interface VNode<
   type: VNodeTypes,
   shapeFlag: number,
   el: HostNode | null,
+  anchor: HostNode | null // fragment anchor
   props: (VNodeProps & ExtraProps) | null
   children: VNodeNormalizedChildren
 

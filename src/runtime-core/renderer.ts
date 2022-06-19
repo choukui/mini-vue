@@ -10,9 +10,15 @@ import { updateProps } from "./componentProps"
 import { ShapeFlags, invokeArrayFns, EMPTY_ARR } from "../shared"
 import { ReactiveEffect } from "../reactive/effect"
 /********** TS类型声明 start ***********/
+export const enum MoveType {
+  ENTER,
+  LEAVE,
+  REORDER
+}
 export interface RendererNode {
   [key: string]: any
 }
+
 export interface RendererElement extends RendererNode {}
 
 export interface Renderer<HostElement = RendererElement> {
@@ -25,17 +31,19 @@ export type RootRenderFunction<HostElement = RendererElement> = (
 ) => void
 
 export interface RendererOptions<HostNode = RendererNode, HostElement = RendererElement> {
-  insert(el: HostNode, parent: HostElement): void
+  insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   createElement(type: string): HostElement
   setElementText(node: HostElement, text: string): void
   createText(text: string): HostNode,
   parentNode(node: HostNode): HostElement | null,
-  remove(el: HostNode): void
+  remove(el: HostNode): void,
+  nextSibling(node: HostNode): HostNode | null
 }
 
 type MountChildrenFn = (
   children: VNodeArrayChildren,
   container: RendererElement,
+  anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   start?: number | undefined
 ) => void
@@ -43,13 +51,15 @@ type MountChildrenFn = (
 type ProcessTextOrCommentFn = (
   n1: VNode | null,
   n2: VNode,
-  container: RendererElement
+  container: RendererElement,
+  anchor: RendererNode | null
 ) => void
 
 type PatchChildrenFn = (
   n1: VNode | null,
   n2: VNode,
   container: RendererElement,
+  anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null
 ) => void
 
@@ -64,18 +74,29 @@ type UnmountFn = (
   parentComponent: ComponentInternalInstance | null
 ) => void
 
+type NextFn = (vnode: VNode) => RendererNode | null
+
 type PatchFn = (
   n1: VNode | null,
   n2: VNode,
   container: RendererElement,
+  anchor?: RendererNode | null,
   parentComponent?: ComponentInternalInstance | null
 ) => void
 
 type RemoveFn = (vnode: VNode) => void
 
+type MoveFn = (
+  vnode: VNode,
+  container: RendererElement,
+  anchor: RendererNode | null,
+  type: MoveType
+) => void
+
 export type MountComponentFn = (
   initialVNode: VNode,
   container: RendererElement,
+  anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null
 ) => void
 
@@ -83,6 +104,7 @@ export type SetupRenderEffectFn = (
   instance: ComponentInternalInstance,
   initialVNode: VNode,
   container: RendererElement,
+  anchor: RendererNode | null
 ) => void
 /********** TS类型声明 end ***********/
 
@@ -107,38 +129,41 @@ function baseCreateRenderer(
     createElement: hostCreateElement,
     setElementText: hostSetElementText,
     createText: hostCreateText,
-    parentNode: hostParentNode
+    parentNode: hostParentNode,
+    nextSibling: hostNextSibling,
   } = options
 
-  const patch: PatchFn = (n1, n2, container, parentComponent = null) => {
+  const patch: PatchFn = (n1, n2, container, anchor = null, parentComponent = null) => {
     if (n1 === n2) { return }
     // n2 是新的vnode，应该基于n2的类型判断
     const { type, shapeFlag } = n2
     switch (type) {
       case Text:
-        processText(n1, n2, container)
+        processText(n1, n2, container, anchor)
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           // 处理普通元素类型
-          processElement(n1, n2, container, parentComponent)
+          processElement(n1, n2, container, anchor, parentComponent)
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           // 处理组件类型
-          processComponent(n1, n2, container, parentComponent)
+          processComponent(n1, n2, container, anchor, parentComponent)
         }
     }
 
   }
 
+  // 处理组件类型
   const processComponent = (
     n1: VNode | null,
     n2: VNode,
     container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null
   ) => {
     if (n1 == null) {
       // 挂载组件
-      mountComponent(n2, container, parentComponent)
+      mountComponent(n2, container, anchor, parentComponent)
     } else {
       // 更新组件
       updateComponent(n1, n2)
@@ -149,7 +174,9 @@ function baseCreateRenderer(
   const mountComponent: MountComponentFn = (
     initialVNode,
     container,
-    parentComponent) => {
+    anchor,
+    parentComponent
+  ) => {
     const instance = (initialVNode.component = createComponentInstance(initialVNode, parentComponent))
     /*
       * 1、为instance设置 render 函数
@@ -160,7 +187,7 @@ function baseCreateRenderer(
     setupComponent(instance)
 
     // 建立更新机制
-    setupRenderEffect(instance, initialVNode, container)
+    setupRenderEffect(instance, initialVNode, container, anchor)
   }
 
   // 更新组件
@@ -171,15 +198,18 @@ function baseCreateRenderer(
     instance.next = n2
     instance.update()
   }
+
+  // 处理元素类型
   const processElement = (
     n1: VNode | null,
     n2: VNode,
     container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null
   ) => {
     // 没有旧节点，挂载元素
     if (n1 == null) {
-      mountElement(n2, container, parentComponent)
+      mountElement(n2, container, anchor, parentComponent)
     } else {
       patchElement(n1, n2, parentComponent)
     }
@@ -189,6 +219,7 @@ function baseCreateRenderer(
   const mountElement = (
     vnode: VNode,
     container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null
     ) => {
     let el: RendererElement
@@ -200,22 +231,25 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
     } if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(vnode.children as VNodeArrayChildren, el, parentComponent)
+      mountChildren(vnode.children as VNodeArrayChildren, el, anchor, parentComponent)
     }
     // dom插入操作，将el插入到container中
-    hostInsert(el, container)
+    hostInsert(el, container, anchor)
   }
 
+  // 更新元素
   const patchElement = (n1: VNode, n2: VNode, parentComponent: ComponentInternalInstance | null) => {
     // 更新新节点上的el
     const el = (n2.el = n1.el!)
-    patchChildren(n1, n2, el, parentComponent)
+    patchChildren(n1, n2, el, null, parentComponent)
   }
 
+  // 更新children
   const patchChildren: PatchChildrenFn = (
     n1,
     n2,
     container,
+    anchor,
     parentComponent
   ) => {
     const { shapeFlag } = n2
@@ -239,8 +273,14 @@ function baseCreateRenderer(
         if (shapeFlag && ShapeFlags.ARRAY_CHILDREN) {
           // 两个数组 就改比较更新了
           // 这里应该是pathKeyedChildren, diff 算法还没实现，先用暴力更新的吧
-          patchUnkeyedChildren(c1 as VNode[], c2 as VNodeArrayChildren, parentComponent, container)
-          // patchKeyedChildren(c1 as VNode[], c2 as VNodeArrayChildren, parentComponent, container)
+          // patchUnkeyedChildren(c1 as VNode[], c2 as VNodeArrayChildren, parentComponent, container)
+          patchKeyedChildren(
+            c1 as VNode[],
+            c2 as VNodeArrayChildren,
+            container,
+            anchor,
+            parentComponent
+          )
         } else {
           //  没有新节点，直接卸载旧节点的children
           unmountChildren(c1 as VNode[], parentComponent)
@@ -252,7 +292,7 @@ function baseCreateRenderer(
         }
         // 新节点是个数组，开始挂载
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          mountChildren(c2 as VNodeArrayChildren, container, parentComponent)
+          mountChildren(c2 as VNodeArrayChildren, container,anchor, parentComponent)
         }
       }
     }
@@ -263,8 +303,9 @@ function baseCreateRenderer(
   const patchKeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
-    parentComponent: ComponentInternalInstance | null,
-    container: RendererElement
+    container: RendererElement,
+    parentAnchor: RendererNode | null,
+    parentComponent: ComponentInternalInstance | null
   ) => {
     /*
     * 名词解释和功能注解
@@ -287,6 +328,7 @@ function baseCreateRenderer(
       // 如果新旧节点相同，则进行patch处理
       if (isSameVNodeType(n1, n2)) {
         // patch 更新children
+        patch(n1, n2, container, null, parentComponent)
       } else {
         // 不相同则跳过
         break
@@ -305,6 +347,7 @@ function baseCreateRenderer(
       // 如果新旧节点相同，则进行patch处理
       if (isSameVNodeType(n1, n2)) {
         // patch 更新children
+        patch(n1, n2, container, null, parentComponent)
       } else {
         // 不相同则跳过
         break
@@ -316,8 +359,11 @@ function baseCreateRenderer(
     //3、 相同部分遍历结束，新序列有多有vnode，进行挂载
     if (i > e1) { // 大于旧节点的长度且小于新节点的长度部分就需要创建新的vnode
       if (i <= e2) {
+        const nextPos = e2 + 1
+        const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
         while (i <= e2) {
           // 创建新节点
+          patch(null, c2[i] as VNode, container, anchor, parentComponent)
           i++
         }
       }
@@ -326,6 +372,7 @@ function baseCreateRenderer(
     else if (i > e2) { // i 大于旧序列长度并且小于新序列长度，证明旧序列有多余的vnode需要卸载
       while (i <= e1) {
         // 卸载旧vnode
+        unmount(c1[i], parentComponent)
         i++
       }
     } else {
@@ -399,7 +446,7 @@ function baseCreateRenderer(
         // 如果已经patch的数量 >= 需要进行patch的数量
         if (patched >= toBePatched) {
           // 这里说明所有新的节点已经patch了，旧的节点都可以移除了
-          // unmount
+          unmount(prevChild, parentComponent)
           continue // 跳过，进行下次循环
         }
 
@@ -422,7 +469,7 @@ function baseCreateRenderer(
         if (newIndex === undefined) {
           // 如果执行到这里，没有找到旧节点在新序列c2中的下标
           // 需要卸载旧结节
-          // unmount()
+          unmount(prevChild, parentComponent)
         } else {
           /**
            *
@@ -450,7 +497,7 @@ function baseCreateRenderer(
             moved = true
           }
           // 进行patch
-          // patch()
+          patch(prevChild, c2[newIndex] as VNode, container, null, parentComponent)
 
           // patched自增 记录已经patch数量
           patched ++
@@ -465,16 +512,25 @@ function baseCreateRenderer(
       for ( i = toBePatched - 1; i >= 0 ; i--) {
         const nextIndex = s2 + i // 下一个节点的位置，用于移动DOM
         const nextChild = c2[nextIndex] // 找到新的vnode
+
+        const anchor =
+          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) { // 情况1: 该节点是全新节点
           // mount new
           // 挂载新的
-          // patch()
+          patch(
+            null,
+            nextChild as VNode,
+            container,
+            anchor,
+            parentComponent
+          )
         } else if (moved) {
           // 如果没有最长递增子序列或者 当前节点不在递增子序列中间
           // 则移动节点
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
             // 情况2，不是递增子序列，该节点需要移动
-            // move()
+            move(nextChild as VNode, container, anchor, MoveType.REORDER)
           } else {
             // 情况3，是递增子序列，该节点不需要移动
             // 让j指向下一个
@@ -491,6 +547,7 @@ function baseCreateRenderer(
     c1: VNode[],
     c2: VNodeArrayChildren,
     parentComponent: ComponentInternalInstance | null,
+    anchor: RendererNode | null,
     container: RendererElement
   ) => {
     c1 = c1 || EMPTY_ARR
@@ -503,19 +560,20 @@ function baseCreateRenderer(
     // 循环patch公共部分
     for (let i = 0; i < commonLength; i++) {
       const nextChild = c2[i]
-      patch(c1[i], nextChild as VNode, container, parentComponent)
+      patch(c1[i], nextChild as VNode, container, null, parentComponent)
     }
     // 循环结束后，如果oldLength 大于 commonLength
     // 证明old children里多余的元素要卸载
     if (oldLength > commonLength) {
       // 移除旧节点
-      unmountChildren(c1, parentComponent)
+      unmountChildren(c1, parentComponent, commonLength)
     } else {
       // 挂载新节点
-      mountChildren(c2, container, parentComponent, commonLength)
+      mountChildren(c2, container, anchor, parentComponent, commonLength)
     }
   }
 
+  // 卸载子组件
   const unmountChildren: UnmountChildrenFn = (
     children,
     parentComponent,
@@ -526,6 +584,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 卸载组件
   const unmount: UnmountFn = (vnode) => {
     const { shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
@@ -553,29 +612,50 @@ function baseCreateRenderer(
     }
   }
 
+  // 删除节点
   const remove:RemoveFn = (vnode) => {
     const { el } = vnode
     hostRemove(el!)
   }
 
+  // 移动节点
+  const move: MoveFn = (vnode, container, anchor, moveType) => {
+    const { el, shapeFlag } = vnode
+    if (shapeFlag & ShapeFlags.COMPONENT) {
+      move(vnode.component!.subTree, container, anchor, moveType)
+      return
+    }
+    hostInsert(el!, container, anchor)
+  }
+
+  // 挂载子组件
   const mountChildren: MountChildrenFn = (
     children,
     container,
+    anchor,
     parentComponent,
     start = 0
   ) => {
     for (let i = start; i < children.length; i++) {
       const child = normalizeVNode(children[i])
-      patch(null, child, container, parentComponent)
+      patch(null, child, container, anchor, parentComponent)
     }
   }
 
+  const getNextHostNode: NextFn = vnode => {
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+      return getNextHostNode(vnode.component!.subTree)
+    }
+    return hostNextSibling((vnode.anchor || vnode.el)!)
+  }
+
   // 处理文本节点
-  const processText: ProcessTextOrCommentFn = (n1, n2, container) => {
+  const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
     if (n1 == null) { // 新增
       hostInsert(
         (n2.el = hostCreateText(n2.children as string)),
-        container
+        container,
+        anchor
       )
     }
   }
@@ -590,7 +670,8 @@ function baseCreateRenderer(
   const setupRenderEffect: SetupRenderEffectFn = (
     instance,
     initialVNode,
-    container
+    container,
+    anchor
   ) => {
     // 当响应式对象更新时，会重新执行componentUpdateFn函数来更新视图
     const componentUpdateFn = () => {
@@ -606,7 +687,7 @@ function baseCreateRenderer(
 
         // 创建 vnode,并保存在组件实例上
         const subTree = (instance.subTree = renderComponentRoot(instance))
-        patch(null, subTree, container, instance)
+        patch(null, subTree, container, anchor, instance)
 
         // mounted
         if (m) {
@@ -634,7 +715,7 @@ function baseCreateRenderer(
         // 更新实例上vnode
         instance.subTree = nextTree
         // 开始对比更新组件
-        patch(prevTree, nextTree, hostParentNode(prevTree.el!)!, instance)
+        patch(prevTree, nextTree, hostParentNode(prevTree.el!)!, getNextHostNode(prevTree), instance)
 
         next.el = nextTree.el
         // updated hook
@@ -657,7 +738,7 @@ function baseCreateRenderer(
     if (vnode == null) {
 
     } else {
-      patch(null, vnode, container, null)
+      patch(null, vnode, container, null, null)
     }
   }
   return {
