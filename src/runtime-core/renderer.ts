@@ -1,5 +1,5 @@
 import { createAppAPI } from "./apiCreateApp";
-import { VNode, VNodeArrayChildren, normalizeVNode, Text } from "./vnode";
+import { VNode, VNodeArrayChildren, normalizeVNode, Text, isSameVNodeType } from "./vnode";
 import { renderComponentRoot } from "./componentRenderUtils";
 import {
   setupComponent,
@@ -258,17 +258,235 @@ function baseCreateRenderer(
     }
   }
 
-  /*const patchKeyedChildren = (
+
+  // 有key子节点更新 diff算法
+  const patchKeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
     parentComponent: ComponentInternalInstance | null,
     container: RendererElement
   ) => {
-    // TODO diff算法实现
-    // 因为比较难，最后在实现，暂时先暴力卸载和更新
-    unmountChildren(c1, parentComponent)
-    mountChildren(c2, container)
-  }*/
+    /*
+    * 名词解释和功能注解
+    * 1、c1: 旧的vnode
+    * 2、c2: 新的vnode
+    * 3、isSameVNodeType 判断是否同一个节点(key & type 都相等，认为是同一个节点)*/
+
+    let i = 0 // 指向新旧序列开始的位置
+    let l2 = c2.length // 新序列的长度
+    let e1 = c1.length - 1 // 新序列的结束位置
+    let e2 = l2 - 1 // 旧序列的结束位置
+
+    // 1、从左侧向右开始遍历, 如果节点不同则退出while循环
+    // (a b) c
+    // (a b) d e
+    // i <= 2 && i <= 3
+    while (i <= e1 && i <= e2) {
+      const n1= c1[i]
+      const n2 = c2[i] as VNode
+      // 如果新旧节点相同，则进行patch处理
+      if (isSameVNodeType(n1, n2)) {
+        // patch 更新children
+      } else {
+        // 不相同则跳过
+        break
+      }
+      i++
+    }
+
+    // 2、从右向左遍历，如果节点不同则退出while循环
+    // a (b c)
+    // d e (b c)
+    // i <= 2 && i <= 3
+    // 结束后：e1 = 0, e2 = 1
+    while (i <= e1 && i <= e2) {
+      const n1= c1[i]
+      const n2 = c2[i] as VNode
+      // 如果新旧节点相同，则进行patch处理
+      if (isSameVNodeType(n1, n2)) {
+        // patch 更新children
+      } else {
+        // 不相同则跳过
+        break
+      }
+      e1--
+      e2--
+    }
+
+    //3、 相同部分遍历结束，新序列有多有vnode，进行挂载
+    if (i > e1) { // 大于旧节点的长度且小于新节点的长度部分就需要创建新的vnode
+      if (i <= e2) {
+        while (i <= e2) {
+          // 创建新节点
+          i++
+        }
+      }
+    }
+    // 4、卸载旧序列多余vnode
+    else if (i > e2) { // i 大于旧序列长度并且小于新序列长度，证明旧序列有多余的vnode需要卸载
+      while (i <= e1) {
+        // 卸载旧vnode
+        i++
+      }
+    } else {
+      //  5. 乱序情况
+      const s1 = i // prev starting index
+      const s2 = i // next starting index
+
+      // 5.1 build key:index map for newChildren
+      // 首先为新的子节点构建在新的子序列中 key：index 的映射
+      // 通过map 创建的新的子节点
+      const keyToNewIndexMap: Map<string | number | symbol, number> = new Map()
+      // 遍历新的vnode 为新的vnode设置key
+      for ( i = s2; i < e2; i++) {
+        const nextChild = c2[i] as VNode
+        if (nextChild.key != null) {
+          // 例如：c2 = a b [e d c h] f g
+          // 那么：keyToNewIndexMap = e:2 d:3 c:4 h:5
+          // [...]里的vnode是本次要遍历的节点
+          keyToNewIndexMap.set(nextChild.key, i)
+        }
+      }
+      // 5.2
+      // 从旧的子节点的左侧开始循环遍历进行patch。
+      // 并且patch匹配的节点 并移除不存在的节点
+
+      /**
+       * 程序执行到这里，我们假设一下前置前置条件, 方便理解
+       * old vnode: c1 =  a   b   [   c   d   e   f  ]  g   h
+       *                             s1=2        e1=5
+       * new vnode: c2 =  a   b   [   d   e   c   i  ]   g   h
+       *                            s2=2        e2=5
+       * 需要移动的节点：c d e
+       * 需要卸载的节点：f
+       * 需要新增的节点：i
+       * [...]里是这次需要patch的child
+       * s1 = 2 => c, e1 = 5 => f
+       * s2 = d => c, e2 = 5 => i
+       * [e d c h]是本次需要patch的节点, a、b、f、g节点在前面已经patch过了
+       * */
+
+      let j
+
+      // 已经patch的节点个数
+      let patched = 0
+
+      // 需要patch的节点数量
+      // 根据我们假设的c2序列，得出patch的数量是4，toBePatched = 4
+      const toBePatched = e2 - s2 + 1
+
+      // 用于判断节点是否需要移动
+      // 当新旧序列出现可复用节点交叉时，moved = true
+      let moved = false
+
+      // 用于记录节点是否已经移动
+      let maxNewIndexSoFar = 0
+
+      // 新下标与旧下标的map映射
+      // 数组的index是新vnode的索引, value是老vnode的索引。
+      const newIndexToOldIndexMap = new Array(toBePatched)
+
+      // 初始化所有下标为0
+      // [0,0,0,0] 由上一步计算得出toBePatched = 4, 所以初始化一个length为4的数组
+      for (i = 0; i < toBePatched; i++) {
+        // 数组所有元素设置为0
+        newIndexToOldIndexMap[i] = 0
+      }
+
+      // 遍历旧序列 起点是s1 终点是e1
+      for ( i = s1; i < e1; i++) {
+        const prevChild = c1[i] // 旧序列的child
+        // 如果已经patch的数量 >= 需要进行patch的数量
+        if (patched >= toBePatched) {
+          // 这里说明所有新的节点已经patch了，旧的节点都可以移除了
+          // unmount
+          continue // 跳过，进行下次循环
+        }
+
+        let newIndex // 旧节点在新序列里的下标
+        // 如果旧节点的key是存在的，通过keyToNewIndexMap获取prevChild在新序列里的下标newIndex
+        if (prevChild.key != null) {
+          // 旧节点肯定有key, 根据旧节点的key获取相同类型的新节点在新序列中的位置
+          newIndex = keyToNewIndexMap.get(prevChild.key)
+        } else {
+          // 如果旧节点没有key，会查找没有key的且类型相同的新节点在新序列中的位置
+          for ( j = s2; j <= e2; j++) { // 遍历剩下的所有新节点
+            if (newIndexToOldIndexMap[j - s2] === 0 && isSameVNodeType(prevChild, c2[j] as VNode)) {
+              // 获取到相同类型节点的下标
+              newIndex = j
+              break
+            }
+          }
+        }
+
+        if (newIndex === undefined) {
+          // 如果执行到这里，没有找到旧节点在新序列c2中的下标
+          // 需要卸载旧结节
+          // unmount()
+        } else {
+          /**
+           *
+           * old vnode: c1 =  a   b   [   c   d   e   f  ]  g   h
+           *                             s1=2        e1=5
+           * new vnode: c2 =  a   b   [   d   e   c   i  ]   g   h
+           *                            s2=2        e2=5
+           * 需要移动的节点：c d e
+           * 需要卸载的节点：f
+           * 需要新增的节点：i
+           * */
+
+          // 根据newIndex开始构建keyToNewIndexMap, 明确新旧节点对应的下标位置
+          // ***newIndex是根据旧节点获取其在新序列中的下标***
+          // newIndexToOldIndexMap =  [ 2, 3, 4, 0]
+          newIndexToOldIndexMap[newIndex - s2] = i + 1
+
+
+          // 判断是否需要移动
+          // 如果newIndex是一直递增的，那么不需要移动
+          // 如果newIndex比上一次的newIndex也就是maxNewIndexSoFar小，那么表示有节点需要移动位置
+          if (newIndex >= maxNewIndexSoFar) {
+            maxNewIndexSoFar = newIndex
+          } else {
+            moved = true
+          }
+          // 进行patch
+          // patch()
+
+          // patched自增 记录已经patch数量
+          patched ++
+        }
+      }
+
+      // 5.3 move & mount
+      // 只有当节点需要移动时，生成最长递增子序列
+      const increasingNewIndexSequence = moved ? getSequence(newIndexToOldIndexMap) : EMPTY_ARR
+      j = increasingNewIndexSequence.length - 1 // 最长子序列的指针
+      // 从右向左遍历 以便于可以用最新的被patch的节点作为锚点
+      for ( i = toBePatched - 1; i >= 0 ; i--) {
+        const nextIndex = s2 + i // 下一个节点的位置，用于移动DOM
+        const nextChild = c2[nextIndex] // 找到新的vnode
+        if (newIndexToOldIndexMap[i] === 0) { // 情况1: 该节点是全新节点
+          // mount new
+          // 挂载新的
+          // patch()
+        } else if (moved) {
+          // 如果没有最长递增子序列或者 当前节点不在递增子序列中间
+          // 则移动节点
+          if (j < 0 || i !== increasingNewIndexSequence[j]) {
+            // 情况2，不是递增子序列，该节点需要移动
+            // move()
+          } else {
+            // 情况3，是递增子序列，该节点不需要移动
+            // 让j指向下一个
+            j--
+          }
+        }
+      }
+    }
+
+  }
+
+  // 无key子节点更新
   const patchUnkeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
@@ -447,4 +665,46 @@ function baseCreateRenderer(
   }
 }
 
+
+// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
+function getSequence(arr: number[]): number[] {
+  const p = arr.slice()
+  const result = [0]
+  let i, j, u, v, c
+  const len = arr.length
+  for (i = 0; i < len; i++) {
+    const arrI = arr[i]
+    if (arrI !== 0) {
+      j = result[result.length - 1]
+      if (arr[j] < arrI) {
+        p[i] = j
+        result.push(i)
+        continue
+      }
+      u = 0
+      v = result.length - 1
+      while (u < v) {
+        c = (u + v) >> 1
+        if (arr[result[c]] < arrI) {
+          u = c + 1
+        } else {
+          v = c
+        }
+      }
+      if (arrI < arr[result[u]]) {
+        if (u > 0) {
+          p[i] = result[u - 1]
+        }
+        result[u] = i
+      }
+    }
+  }
+  u = result.length
+  v = result[u - 1]
+  while (u-- > 0) {
+    result[u] = v
+    v = p[v]
+  }
+  return result
+}
 

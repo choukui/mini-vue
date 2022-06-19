@@ -19,6 +19,8 @@ export interface VNode<
   props: (VNodeProps & ExtraProps) | null
   children: VNodeNormalizedChildren
 
+  key: string | number | symbol | null
+
   appContext: AppContext | null
 }
 export type VNodeProps = {
@@ -48,6 +50,10 @@ export const Text = Symbol(undefined)
 // 判断是否是个vnode
 export function isVNode(value: any):value is VNode  {
   return value ? value.__v_isVNode === true : false
+}
+
+export function isSameVNodeType(n1: VNode, n2:VNode):boolean {
+  return n1.type === n2.type && n1.key === n2.key
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
