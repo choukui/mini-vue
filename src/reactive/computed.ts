@@ -24,8 +24,8 @@ export interface ComputedRef<T> extends WritableComputedRef<any> {
 
 class ComputedRefImpl<T> {
   public dep?: Dep = undefined
-  private _value!: T
-  private _dirty = true // _dirty为false不会执行getter函数
+  private _value!: T // value 用来缓存上一次的值
+  private _dirty = true // _dirty标志，用来表示是否重新计算值，为true则以为着"赃"，需要计算
   public readonly effect: ReactiveEffect<T>
   public readonly __v_isRef = true // ref标记
   // @ts-ignore
@@ -50,6 +50,7 @@ class ComputedRefImpl<T> {
 
   get value () {
     const self = toRaw(this)
+    // 当读取value时，手动调用 track 函数进行追踪
     trackRefValue(self)
     // computed的惰性求值关键就在这里
     // 1、假如已经求过值了，下次再访问computed，直接返回_value
